@@ -90,7 +90,10 @@ func _gui_input(event: InputEvent) -> void:
 			if button.rect.has_point(point):
 				button.callback.call()
 				accept_event()
-				break
+				return
+		if not race.touch.enabled and event.device!=InputEvent.DEVICE_ID_EMULATION and race.mode=="racing":
+			race.primary_attack(true)
+			accept_event()
 
 func rebind(key: int) -> void:
 	if key == KEY_ESCAPE:
@@ -311,7 +314,7 @@ func draw_race() -> void:
 	text(race.Combat.WEAPONS[p.weapon].name+"  /  "+("格挡中" if p.guarding else ("反击！" if p.counter_time>0 else "就绪")),58,601,19,gold,true)
 	text("体力",58,632,14,faded)
 	bar(108,623,177,p.stamina,Color("758e82"))
-	text("闪避 %.1f s" % p.dodge_cooldown if p.dodge_cooldown>0 else "闪避可用 · O 抢夺蓄力中的武器",58,663,14,faded)
+	text("闪避 %.1f s" % p.dodge_cooldown if p.dodge_cooldown>0 else "左键自动攻击 / 夺械 · I 闪避",58,663,14,faded)
 	if race.police.active or race.heat>15:
 		panel(Rect2(1110,28,300,72))
 		text("POLICE / 警方追击" if race.police.active else "HEAT / 警觉度",1127,57,17,red if race.police.active else gold,true)
@@ -320,7 +323,7 @@ func draw_race() -> void:
 	if opponent>=0 and race.mode == "racing":
 		var r = race.racers[opponent]
 		panel(Rect2(40,30,264,81))
-		text(r.name+("  /  即将攻击" if (r.windup>0 and r.combat_target==-1) else "  /  %d m" % Vector2(r.s-p.distance,r.lane-p.lane).length()),58,60,18,red if (r.windup>0 and r.combat_target==-1) else cream,true)
+		text(r.name+(("  /  正在夺械" if r.stealing else "  /  即将攻击") if (r.windup>0 and r.combat_target==-1) else "  /  "+race.RacerAI.intent_label(r)),58,60,18,red if (r.windup>0 and r.combat_target==-1) else cream,true)
 		bar(58,82,226,r.hp,red)
 		var world_pos = r.mesh.global_position+Vector3(0,2.15,0)
 		if opponent==race.target_index and not race.camera.is_position_behind(world_pos):

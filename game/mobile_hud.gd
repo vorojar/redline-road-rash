@@ -107,7 +107,7 @@ func draw_race(h, height: float) -> void:
 		var rival = race.racers[opponent]
 		h.text(rival.name+" · %d m" % Vector2(rival.s-p.distance,rival.lane-p.lane).length(),610,29,20,h.red if (rival.windup>0 and rival.combat_target==-1) else h.cream,true)
 		h.bar(610,43,220,rival.hp,h.red if rival.hp<35 else h.gold)
-		h.text("准备格挡" if (rival.windup>0 and rival.combat_target==-1) else "对手体力",610,78,18,h.red if (rival.windup>0 and rival.combat_target==-1) else h.faded)
+		h.text(("小心夺械" if rival.stealing else "准备格挡") if (rival.windup>0 and rival.combat_target==-1) else race.RacerAI.intent_label(rival),610,78,18,h.red if (rival.windup>0 and rival.combat_target==-1) else h.faded)
 	else:
 		h.text(race.Combat.WEAPONS[p.weapon].name,624,49,24,h.gold)
 	h.bar(24,70,160,p.health,h.red if p.health<35 else Color("789463"))

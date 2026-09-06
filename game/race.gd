@@ -16,7 +16,7 @@ const HUD = preload("res://game/hud.gd")
 
 var touch = TouchControls.new()
 var touch_device: bool = false
-var touch_punch: bool = true
+var primary_punch: bool = true
 var web_suspend_callback
 var career = Career.new()
 var player = BikeState.new()
@@ -171,7 +171,7 @@ func reset_race() -> void:
 		actor.set_model(career.bike(bike_id))
 		actor.tint([Color("454641"),Color("777069"),Color("8c7c3f"),Color("223a48"),Color("531e1a")][i])
 		actor.style_rider([Color("b94132"),Color("e0b84b"),Color("3c83b7"),Color("60a16c"),Color("bc7850")][i],[Color("e2ddd0"),Color("c04435"),Color("e2ddd0"),Color("e4bf46"),Color("263747")][i])
-		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new(),"duel_time":0.0,"duel_cooldown":0.0,"combat_target":-2,"attack_side":1.0})
+		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new(),"duel_time":0.0,"duel_cooldown":0.0,"combat_target":-2,"attack_side":1.0,"grudge_target":-2,"grudge_time":0.0,"retreat_time":0.0,"retreat_cooldown":0.0,"stealing":false})
 	for i in range(18):
 		var truck = i%6 == 5
 		var car = Traffic.vehicle([Color("afb0a5"),Color("65564a"),Color("375058"),Color("8f866a")][i%4],truck)
@@ -250,10 +250,22 @@ func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED]:
 		suspend_input()
 
+func can_grab_target(index: int) -> bool:
+	if index<0 or mode!="racing": return false
+	var target: Dictionary = racers[index]
+	return target.crash<=0 and not target.finished and target.weapon>0 and (target.windup>0 or target.stagger>0) and player.weapon==0 and absf(target.s-player.distance)<=2 and absf(target.lane-player.lane)<=2.2 and player.cooldown<=0 and player.crash_timer<=0 and player.stamina>=20 and player.dodge_time<=0 and not player.guarding and pending_attack<=0
+
 func can_touch_grab() -> bool:
-	if target_index<0 or mode!="racing": return false
-	var target: Dictionary = racers[target_index]
-	return target.weapon>0 and (target.windup>0 or target.stagger>0) and player.weapon==0 and absf(target.s-player.distance)<=2 and absf(target.lane-player.lane)<=2.2 and player.cooldown<=0 and player.crash_timer<=0 and player.stamina>=20 and player.dodge_time<=0
+	return can_grab_target(target_index)
+
+func primary_attack(prefer_grab: bool = false) -> bool:
+	if mode!="racing": return false
+	if prefer_grab and can_grab_target(nearest_target()):
+		return Combat.grab(self)
+	if attack(2 if player.weapon>0 else (0 if primary_punch else 1)):
+		if player.weapon==0: primary_punch = not primary_punch
+		return true
+	return false
 
 func _input(event: InputEvent) -> void:
 	if not touch.enabled: return
@@ -266,8 +278,7 @@ func _input(event: InputEvent) -> void:
 			if action == "pause":
 				suspend_input()
 			elif action == "attack" and mode=="racing":
-				if attack(2 if player.weapon>0 else (0 if touch_punch else 1)):
-					touch_punch = not touch_punch
+				primary_attack()
 			elif action == "grab" and mode=="racing": Combat.grab(self)
 			get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag and touch.fingers.has(event.index):
@@ -429,7 +440,7 @@ func resolve_attack() -> bool:
 	if attack_target<0 or player.crash_timer>0:
 		return false
 	var r = racers[attack_target]
-	if r.crash>0 or absf(r.s-player.distance)>2.6 or absf(r.lane-player.lane)>[2.05,2.55,3.1][pending_kind]:
+	if r.crash>0 or r.finished or (r.lane-player.lane)*player.attack_side<0 or absf(r.s-player.distance)>2.6 or absf(r.lane-player.lane)>[2.05,2.55,3.1][pending_kind]:
 		return false
 	if r.dodge > 0:
 		notify(r.name+" 闪过攻击")
@@ -453,8 +464,10 @@ func resolve_attack() -> bool:
 	player.counter_time = 0
 	r.hp -= power
 	r.stability -= [22,40,32][pending_kind]
-	r.lane += player.attack_side*[.38,1.35,.72][pending_kind]
-	r.stagger = .6
+	r.lane += player.attack_side*Combat.IMPACTS[pending_kind].push
+	r.stagger = Combat.IMPACTS[pending_kind].stagger
+	r.mesh.react_to_hit(player.attack_side,pending_kind,elapsed)
+	Combat.remember_hit(r,-1)
 	r.cooldown = 1.1
 	r.windup = 0
 	r.last_hit_age = 0
@@ -482,11 +495,12 @@ func knock_out(index: int, environment: bool, direct: bool = false) -> void:
 		notify(("环境击倒 " if environment else "击倒 ")+r.name+"   %d 连击" % player.combo)
 		sound.hit(true)
 
-func feedback(crash: bool, position: Vector3, kind: int = 0, weapon: int = 0) -> void:
-	shake = .75 if crash else .25
-	flash = .28 if crash else .1
-	hit_stop = .06 if crash else .035
-	sound.hit(crash,kind,weapon)
+func feedback(crash: bool, position: Vector3, kind: int = 0, weapon: int = 0, intensity: float = 1.0) -> void:
+	var impact: Dictionary = Combat.IMPACTS[kind]
+	shake = maxf(shake,(.75 if crash else impact.shake)*intensity)
+	flash = maxf(flash,(.28 if crash else impact.flash)*intensity)
+	hit_stop = maxf(hit_stop,(.06 if crash else impact.stop)*intensity)
+	sound.hit(crash,kind,weapon,intensity)
 	for i in range(10):
 		var mesh = MeshInstance3D.new()
 		var shape = SphereMesh.new()

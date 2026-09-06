@@ -1,4 +1,5 @@
 extends Node
+const Combat = preload("res://game/systems/combat.gd")
 
 var engine: AudioStreamPlayer
 var idle: AudioStreamPlayer
@@ -99,15 +100,16 @@ func play_effect(name: String, db: float, pitch: float) -> void:
 func swing(kind: int) -> void:
 	play_effect("swing",-21 if kind==0 else -16,1.2 if kind==0 else .9)
 
-func hit(crash: bool = false, kind: int = 0, weapon: int = 0) -> void:
+func hit(crash: bool = false, kind: int = 0, weapon: int = 0, intensity: float = 1.0) -> void:
 	if crash:
 		play_effect("crash",-8,1)
 		duck_time = .65
 	else:
 		var group = ("wood" if weapon==1 else "metal") if kind==2 and weapon>0 else "hit"
-		play_effect(group+"_"+str(variation%3),-10,.96+(variation%3)*.035)
+		var impact: Dictionary = Combat.IMPACTS[kind]
+		play_effect(group+"_"+str(variation%3),impact.db+linear_to_db(intensity),impact.pitch+(variation%3)*.035)
 		variation += 1
-		duck_time = .18
+		duck_time = [.10,.18,.28][kind]*intensity
 
 func click() -> void:
 	if ui != null: ui.play()

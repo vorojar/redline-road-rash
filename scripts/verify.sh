@@ -33,6 +33,10 @@ run_checked work/verify-duel.log --headless --path "$ROOT" --script res://tests/
 cat work/verify-duel.log
 run_checked work/verify-combat-pack.log --headless --path "$ROOT" --script res://tests/combat_pack.gd
 cat work/verify-combat-pack.log
+run_checked work/verify-combat-personality.log --headless --path "$ROOT" --script res://tests/combat_personality.gd
+cat work/verify-combat-personality.log
+run_checked work/verify-mouse-combat.log --headless --path "$ROOT" --script res://tests/mouse_combat.gd
+cat work/verify-mouse-combat.log
 run_checked work/verify-touch.log --headless --path "$ROOT" --script res://tests/touch_controls.gd
 cat work/verify-touch.log
 run_checked work/verify-pine.log --headless --path "$ROOT" --script res://tests/drive_soak.gd --fixed-fps 60

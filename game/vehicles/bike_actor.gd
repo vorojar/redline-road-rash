@@ -1,5 +1,6 @@
 extends CharacterBody3D
 
+const Combat = preload("res://game/systems/combat.gd")
 const RecoveryMotion = preload("res://game/vehicles/recovery_motion.gd")
 const CrashRig = preload("res://game/vehicles/crash_rig.gd")
 const BIKE = preload("res://assets/models/motorcycle.glb")
@@ -28,6 +29,10 @@ var recovery_segments: Dictionary = {}
 var held_weapon: int = 0
 var guarding: bool = false
 var dodging: float = 0
+var recoil_side: float = 0
+var recoil_strength: float = 0
+var recoil_started: float = -100.0
+var recoil_duration: float = 0
 var windup: float = 0
 var spring_height: float = 0
 var spring_velocity: float = 0
@@ -180,6 +185,12 @@ func _exit_tree() -> void:
 func pause_crash(value: bool) -> void:
 	if is_instance_valid(crash_rig): crash_rig.pause(value)
 
+func react_to_hit(direction: float, kind: int, time: float) -> void:
+	recoil_side = direction
+	recoil_strength = Combat.IMPACTS[kind].recoil
+	recoil_duration = Combat.IMPACTS[kind].stagger
+	recoil_started = time
+
 func pose(time: float, lean: float, slope: float, crash_time: float, attack: float, side: float, kind: int, stagger: float = 0, travel: float = 0) -> void:
 	if crash_time > 4.2:
 		if not is_instance_valid(crash_rig):
@@ -228,11 +239,16 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 	var strike = smoothstep(delay*.55,delay,age) if attack>0 else 0.0
 	var recover = smoothstep(delay+.08,delay+.44,age) if attack>0 else 0.0
 	var effort = prepare*(1-recover)
-	var twist = side*lerpf(-.38,.60,strike)*effort if kind!=1 else side*.18*effort
+	var twist = side*lerpf(-.22 if kind==0 else -.42,.42 if kind==0 else .72,strike)*effort if kind!=1 else side*.18*effort
 	var shoulder_basis = Basis(Vector3.UP,twist)
 	shoulder += Vector3(side*.08*strike,.10*effort,.05*effort)
 	head_start += Vector3(side*.07*strike,.10*effort,.02*effort)
-	if stagger>0 and not just_recovered:
+	var recoil_age = time-recoil_started
+	if recoil_age>=0 and recoil_age<recoil_duration and not just_recovered:
+		var impact_recoil = sin(clampf(recoil_age/.07,0,1)*PI*.5)*pow(1-recoil_age/recoil_duration,2)*recoil_strength
+		shoulder += Vector3(recoil_side*.18*impact_recoil,-.055*impact_recoil,.09*impact_recoil)
+		head_start += Vector3(recoil_side*.24*impact_recoil,-.08*impact_recoil,.10*impact_recoil)
+	elif stagger>0 and not just_recovered:
 		var recoil = sin(clampf(stagger/.6,0,1)*PI)
 		shoulder += Vector3(-side*.13*recoil,-.055*recoil,.09*recoil)
 		head_start += Vector3(-side*.17*recoil,-.08*recoil,.10*recoil)
@@ -255,8 +271,8 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 				ankle = ankle.lerp(Vector3(side*.91,.79,-.14),effort*strike)
 			else:
 				var chamber = arm_start+Vector3(side*.12,.19,.25)
-				var contact = arm_start+Vector3(side*.54,.04,-.12)
-				var follow = arm_start+Vector3(side*.31,-.16,-.32)
+				var contact = arm_start+(Vector3(side*.56,.07,-.20) if kind==0 else Vector3(side*.46,.16,-.10))
+				var follow = arm_start+(Vector3(side*.36,.02,-.24) if kind==0 else Vector3(side*.31,-.16,-.32))
 				hand = hand.lerp(chamber,prepare)
 				hand = hand.lerp(contact,strike)
 				hand = hand.lerp(follow,smoothstep(delay,delay+.13,age))

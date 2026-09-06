@@ -73,7 +73,7 @@ func run() -> void:
 	check(not race.attack(1),"冷却拒绝连续攻击")
 	race.pending_attack=0
 	check(race.resolve_attack() and enemy.hp==83 and enemy.stability==60,"踢击前摇后命中")
-	check(is_equal_approx(enemy.lane,4.85) and enemy.revenge==1,"踢击横向位移与报复记忆")
+	check(is_equal_approx(enemy.lane,5.05) and enemy.revenge==1,"踢击横向位移与报复记忆")
 	enemy.s=20.0
 	check(not race.resolve_attack() and enemy.hp==83,"逃出攻击范围不会受伤")
 	enemy.s=0;enemy.lane=3;enemy.stability=20

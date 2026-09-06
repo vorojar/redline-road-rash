@@ -112,11 +112,18 @@ func run() -> void:
 	race.player.weapon = 0
 	race.player.cooldown = 0
 	race.target_index = 0
+	race.racers[0].finished = false
+	race.racers[0].crash = 0
 	race.racers[0].weapon = 1
 	race.racers[0].windup = .5
 	race.racers[0].s = race.player.distance+1
 	race.racers[0].lane = race.player.lane+1
+	check(not race.can_touch_grab(),"挥击尚未结算时不并发夺械")
+	race.pending_attack = 0
 	check(race.can_touch_grab(),"近身对手蓄力时提供夺械按钮")
+	race.racers[0].finished = true
+	check(not race.can_touch_grab(),"已完赛对手不显示夺械按钮")
+	race.racers[0].finished = false
 	race.racers[0].s += 6
 	check(not race.can_touch_grab(),"超过夺械距离时隐藏按钮")
 	race.career.settings.control_mode = 2
