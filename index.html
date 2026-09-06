@@ -44,7 +44,7 @@ canvas.addEventListener('touchcancel',suspendGame,{capture:true,passive:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame();});
 canvas.addEventListener('contextmenu',event=>event.preventDefault());
 fitGame();
-const config={"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.wasm":39514754,"redline-2370dfb50f23bab7.pck":22608936},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"mainPack":"redline-2370dfb50f23bab7.pck"};
+const config={"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.wasm":39514754,"redline-62d5b174cac1cbc1.pck":22664848},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"mainPack":"redline-62d5b174cac1cbc1.pck"};
 // Cap UI resolution; Godot scales the 3D scene separately to keep text sharp.
 if(window.redlineTouchDevice) config.canvasResizePolicy=0;
 const engine=new Engine(config);
