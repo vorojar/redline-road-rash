@@ -25,7 +25,7 @@ func run():
 	for i in range(30): straight.drive(1.0/60,1,0,0,false)
 	var lane_before=straight.lane
 	for i in range(6): straight.drive(1.0/60,1,0,0,false)
-	check(straight.lane-lane_before>.25,"松手后保留改变的行驶方向，不吸回道路朝向")
+	check(straight.lane-lane_before>.05,"松手后保留改变的行驶方向，不吸回道路朝向")
 	for track in ["pine","coast"]:
 		var route=Route.new()
 		route.curve=load("res://data/tracks/"+track+".tres")
@@ -82,7 +82,7 @@ func run():
 			drag.index=17; drag.position=point-Vector2(95,0)*race.hud.mobile_scale()
 			race._input(drag)
 		for frame in range(8): race._physics_process(1.0/60)
-		check(race.player.heading_offset>.12 and race.player.lane<2,control+" 输入真实改变车头并向左行驶")
+		check(race.player.heading_offset>.03 and race.player.lane<2,control+" 输入真实改变车头并向左行驶")
 		check(absf(wrapf(race.player_mesh.rotation.y-race.route.yaw(race.player.distance)-race.player.heading_offset,-PI,PI))<.001,control+" 车体实际朝向与驾驶方向一致")
 		Input.action_release("left")
 		race.touch.clear()

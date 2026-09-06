@@ -19,6 +19,8 @@ func _initialize() -> void:
 				bike.curve_force = bend
 				var largest_offset = 0.0
 				for frame in range(hz*10):
+					# Enter the bend over half a second, as on the continuous road spline.
+					bike.curve_force = bend*minf(frame/float(hz)*2,1)
 					var steer = Driver.steer(bike,2)
 					bike.drive(1.0/hz,1,0,steer,boosted)
 					largest_offset = maxf(largest_offset,absf(bike.lane-2))

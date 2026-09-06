@@ -1,6 +1,7 @@
 extends RefCounted
 
 const CRASH_DURATION: float = 6.2
+const STEERING_EXPONENT: float = 1.8
 var distance: float = 0.0
 var lane: float = 2.0
 var speed: float = 0.0
@@ -93,8 +94,13 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 		speed = maxf(0,speed+minf(target_accel,0)*dt)
 		speed = move_toward(speed,cap,dt*12)
 	# Steering changes heading in world space. Road yaw only changes its relative angle.
-	var desired_rate = -steer*turn_rate()
-	steering_rate = move_toward(steering_rate,desired_rate,dt*24)
+	var shaped_steer = signf(steer)*pow(absf(steer),STEERING_EXPONENT)
+	var desired_rate = -shaped_steer*turn_rate()
+	# Build steering gently, but remove it promptly when releasing or countersteering.
+	if steering_rate*desired_rate<0:
+		steering_rate = move_toward(steering_rate,0,dt*30)
+	else:
+		steering_rate = move_toward(steering_rate,desired_rate,dt*(30 if absf(desired_rate)<absf(steering_rate) else 10))
 	var forward_speed = speed*maxf(0,cos(heading_offset))/maxf(.35,1+curve_force*lane)
 	var advance = forward_speed*dt
 	var heading_change = steering_rate*dt-curve_force*advance
@@ -154,7 +160,8 @@ func credit_ko(environment: bool) -> void:
 	combo_timer = 10
 
 func turn_rate() -> float:
-	return handling*.5*clampf(speed/12,0,1)
+	var high_speed_damping = lerpf(1.0,.85,clampf((speed-25)/40,0,1))
+	return handling*.5*clampf(speed/12,0,1)*high_speed_damping
 
 # Arcade cornering trades a little speed for grip; impacts own the fall penalty.
 static func corner_speed(curvature: float, maximum: float, agility: float) -> float:
