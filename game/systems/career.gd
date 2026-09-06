@@ -37,6 +37,8 @@ func load_profile() -> void:
 		selected = "ratchet"
 	unlocked = parsed.get("unlocked", ["pine"])
 	records = parsed.records
+	if records.has("coast") and records.coast is Dictionary and typeof(records.coast.get("best_place")) in [TYPE_INT,TYPE_FLOAT] and records.coast.best_place>=1 and records.coast.best_place<=3 and "interstate" not in unlocked:
+		unlocked.append("interstate")
 	var saved_settings = parsed.get("settings", {})
 	if saved_settings is Dictionary:
 		for key in settings:
@@ -92,4 +94,6 @@ func settle(track_id: String, place: int, seconds: float, kos: int, environment_
 	records[track_id] = previous
 	if track_id == "pine" and place <= 3 and "coast" not in unlocked:
 		unlocked.append("coast")
+	if track_id == "coast" and place <= 3 and "interstate" not in unlocked:
+		unlocked.append("interstate")
 	return reward

@@ -68,7 +68,8 @@ static func choose_target(race: Node3D, index: int) -> int:
 		var other = race.racers[j]
 		if j!=index and other.crash<=0 and not other.finished and (challenge_score(race,other)<challenge_score(race,r) or (challenge_score(race,other)==challenge_score(race,r) and j<index)):
 			nearer+=1
-	if nearer<2 and race.player.crash_timer<=0:
+	var challengers = 0 if race.endurance.pressure()==0 else 1 if race.endurance.pressure()<.8 else 2
+	if nearer<challengers and race.player.crash_timer<=0:
 		return -1
 	var target = -2
 	var best = 45.0

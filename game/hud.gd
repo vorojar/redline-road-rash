@@ -188,15 +188,15 @@ func draw_menu() -> void:
 		text("TO NOBODY.",73,241,38,cream,true)
 		text("高速穿过车流，把对手甩在身后。",73,284,18,faded)
 		text("选择赛事",73,333,14,gold)
-		for i in range(2):
+		for i in range(race.career.catalog.tracks.size()):
 			var track: Dictionary = race.career.catalog.tracks[i]
 			var locked = track.id not in race.career.unlocked
-			button(Rect2(73,349+i*61,408,51),("▶ " if race.track.id == track.id else "   ")+track.name+(" · 未解锁" if locked else ""),func(): race.select_track(i),race.track.id == track.id)
-		button(Rect2(73,492,408,61),"开始比赛     ENTER",func(): race.start(),true)
-		button(Rect2(73,567,197,48),"车库 / GARAGE",func(): race.menu_action("garage"))
-		button(Rect2(284,567,197,48),"驾驶设置",func(): race.menu_action("settings"))
-		button(Rect2(73,629,408,48),"教学练习 · 不计奖金",func(): race.start(true))
-		text("WASD 驾驶  ·  J K L 攻击  ·  SHIFT 蓄力",73,717,16,faded)
+			button(Rect2(73,349+i*61,408,51),("▶ " if race.track.id == track.id else "   ")+track.name+(" · 12 km" if track.id=="interstate" else "")+(" · 未解锁" if locked else ""),func(): race.select_track(i),race.track.id == track.id)
+		button(Rect2(73,548,408,61),"开始比赛     ENTER",func(): race.start(),true)
+		button(Rect2(73,621,197,48),"车库 / GARAGE",func(): race.menu_action("garage"))
+		button(Rect2(284,621,197,48),"驾驶设置",func(): race.menu_action("settings"))
+		button(Rect2(73,683,408,48),"教学练习 · 不计奖金",func(): race.start(true))
+		text("WASD 驾驶  ·  J K L 攻击  ·  SHIFT 蓄力",73,754,14,faded)
 		text(race.track.subtitle,875,668,21,gold,true)
 		text(race.career.bike().name,875,710,30,cream,true)
 		text("%d km/h   ·   %s" % [int(race.player.top_speed*3.6),race.difficulty().name],875,744,18,cream)
@@ -320,6 +320,10 @@ func draw_race() -> void:
 	text("体力",58,632,14,faded)
 	bar(108,623,177,p.stamina,Color("758e82"))
 	text("闪避 %.1f s" % p.dodge_cooldown if p.dodge_cooldown>0 else "左键自动攻击 / 夺械 · I 闪避",58,663,14,faded)
+	if race.endurance.index>=0:
+		panel(Rect2(465,107,340,36),Color(.02,.035,.03,.7))
+		text(race.endurance.stages[race.endurance.index].name,480,132,21,gold,true)
+	if p.condition_power()<.98: text("车损 · 动力下降",97,858,15,red,true)
 	if race.police.active or race.heat>15:
 		panel(Rect2(1110,28,300,72))
 		text("POLICE / 警方追击" if race.police.active else "HEAT / 警觉度",1127,57,17,red if race.police.active else gold,true)

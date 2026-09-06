@@ -87,8 +87,9 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 			steering_rate = 0
 			lateral_impulse = 0
 		return
-	var cap = corner_speed(curve_force,top_speed+12 if boost else top_speed,handling)
-	var target_accel = throttle*(acceleration+(6 if boost else 0)) - brake*32 - 1.8 - ground_slope*8
+	var motor = condition_power()
+	var cap = corner_speed(curve_force,top_speed*motor+(12 if boost else 0),handling)
+	var target_accel = throttle*(acceleration*motor+(6 if boost else 0)) - brake*32 - 1.8 - ground_slope*8
 	if speed<=cap:
 		speed = clampf(speed+target_accel*dt,0,cap)
 	else:
@@ -119,7 +120,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	stability = minf(100,stability+dt*7)
 	if absf(lane)>8.1:
 		lane = clampf(lane,-8.1,8.1)
-		damage(5,26)
+		damage(5,26,true)
 		lateral_impulse = -lateral_velocity*.35
 		heading_offset *= -.35
 		steering_rate = 0
@@ -131,10 +132,14 @@ func apply_lateral_impulse(amount: float) -> void:
 	lateral_impulse += amount
 	lateral_velocity += amount
 
-func damage(amount: float, instability: float) -> bool:
+func condition_power() -> float:
+	return 1.0-.14*smoothstep(.2,.8,1-durability/max_durability)
+
+func damage(amount: float, instability: float, vehicle_impact: bool = false) -> bool:
 	if invulnerable>0 or crash_timer>0:
 		return false
 	health = maxf(0,health-amount)
+	if vehicle_impact: durability=maxf(0,durability-amount*.16)
 	stability -= instability
 	invulnerable = .65
 	if stability<=0 or health<=0:

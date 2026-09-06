@@ -1,5 +1,6 @@
 extends Node3D
 
+const Endurance = preload("res://game/systems/endurance.gd")
 const FinishPresentation = preload("res://game/systems/finish_presentation.gd")
 const Burst = preload("res://game/systems/burst.gd")
 const BikeState = preload("res://game/bike_state.gd")
@@ -15,6 +16,7 @@ const Combat = preload("res://game/systems/combat.gd")
 const TouchControls = preload("res://game/touch_controls.gd")
 const HUD = preload("res://game/hud.gd")
 
+var endurance = Endurance.new()
 var finish_presentation = FinishPresentation.new()
 var touch = TouchControls.new()
 var touch_device: bool = false
@@ -136,6 +138,7 @@ func difficulty() -> Dictionary:
 
 func reset_race() -> void:
 	touch.clear()
+	endurance.configure(track)
 	finish_presentation = FinishPresentation.new()
 	player_mesh.celebration = 0
 	for r in racers:
@@ -144,6 +147,7 @@ func reset_race() -> void:
 		car.mesh.queue_free()
 	if not police.is_empty():
 		police.mesh.queue_free()
+		police.support_mesh.queue_free()
 	racers.clear()
 	traffic.clear()
 	player = BikeState.new()
@@ -181,10 +185,13 @@ func reset_race() -> void:
 		var truck = i%6 == 5
 		var car = Traffic.vehicle([Color("afb0a5"),Color("65564a"),Color("375058"),Color("8f866a")][i%4],truck)
 		add_child(car)
-		traffic.append({"mesh":car,"s":160.0+i*85,"lane":[-4.7,-1.6,1.6,4.7][i%4],"speed":-20.0 if i%4<2 else 22.0,"half_length":3.8 if truck else 2.1})
+		var traffic_speed = (-18.0 if truck else -20.0) if i%4<2 else (18.0 if truck else 22.0+(i%3)*1.5)
+		traffic.append({"mesh":car,"s":160.0+i*85,"lane":[-4.7,-1.6,1.6,4.7][i%4],"speed":traffic_speed,"half_length":3.8 if truck else 2.1,"driver":Traffic.Driver.state(i,[-4.7,-1.6,1.6,4.7][i%4],traffic_speed)})
 	var cop = Traffic.vehicle(Color("cdcec3"),false,true)
 	add_child(cop)
-	police = {"mesh":cop,"s":-90.0,"lane":2.0,"active":false,"warning":0.0,"arrest":0.0,"roadblock":false}
+	var support=Traffic.vehicle(Color("babfc3"),false,true)
+	add_child(support)
+	police = {"support_mesh":support,"support_active":false,"support_s":-140.0,"support_lane":-2.0,"support_warning":0.0,"mesh":cop,"s":-90.0,"lane":2.0,"active":false,"warning":0.0,"arrest":0.0,"roadblock":false}
 	for hazard in world.hazards:
 		hazard.hit = false
 		hazard.node.rotation = Vector3.ZERO
@@ -193,7 +200,7 @@ func reset_race() -> void:
 func select_track(index: int) -> bool:
 	var next: Dictionary = career.catalog.tracks[index]
 	if next.id not in career.unlocked:
-		notify("松岭公路进入前三，解锁海岸断崖。",3)
+		notify("海岸断崖进入前三，解锁跨郡耐力赛。" if next.id=="interstate" else "松岭公路进入前三，解锁海岸断崖。",3)
 		return false
 	if next.id != track.id:
 		track = next
@@ -386,6 +393,7 @@ func simulate(dt: float, throttle: float, brake: float, steer: float, boost: boo
 		pending_attack -= dt
 		if pending_attack<=0:
 			resolve_attack()
+	endurance.update(self,dt)
 	RacerAI.update(self,dt)
 	Traffic.update(self,dt)
 	rank = 1
@@ -558,6 +566,7 @@ func update_visuals(dt: float) -> void:
 		player_mesh.position = route.point(visual_distance,player.lane)
 		player_mesh.rotation.y = route.yaw(visual_distance)+player.heading_offset
 	player_mesh.ride_speed = finish_presentation.speed if mode=="finished" else player.speed
+	player_mesh.damage_visuals.update(player.durability/player.max_durability,mode=="racing" and player.crash_timer<=0)
 	player_mesh.set_combat(player.weapon,player.guarding,player.dodge_time,0)
 	player_mesh.crash_velocity = route.tangent(player.distance)*player.crash_speed*maxf(0,cos(player.heading_offset))*.35+Basis(Vector3.UP,route.yaw(player.distance)).x*player.crash_lateral
 	player_mesh.pose(elapsed,player.lean,route.slope(player.distance),player.crash_timer,player.attack_time,player.attack_side,player.attack_kind,flash,visual_distance)
@@ -571,6 +580,9 @@ func update_visuals(dt: float) -> void:
 	for car in traffic:
 		car.mesh.position = route.point(car.s,car.lane)
 		car.mesh.rotation = Vector3(route.slope(car.s),route.yaw(car.s)+(PI if car.speed<0 else 0),0)
+	police.support_mesh.visible=police.active and police.support_active
+	police.support_mesh.position=route.point(police.support_s,police.support_lane)
+	police.support_mesh.rotation.y=route.yaw(police.support_s)
 	police.mesh.visible = police.active
 	police.mesh.position = route.point(police.s,police.lane)
 	police.mesh.rotation.y = route.yaw(police.s)

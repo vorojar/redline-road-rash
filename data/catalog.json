@@ -79,6 +79,96 @@
         200,
         150
       ]
+    },
+    {
+      "id": "interstate",
+      "name": "跨郡耐力赛",
+      "subtitle": "COUNTY RUN / 12 KM",
+      "length": 12000.0,
+      "theme": "forest",
+      "prize": [
+        4200,
+        2800,
+        1800,
+        1100,
+        700,
+        450
+      ],
+      "unlock_after": "coast",
+      "stages": [
+        {
+          "start": 0,
+          "name": "出城争位",
+          "kind": "open",
+          "traffic_speed": 25,
+          "pressure": 0.7,
+          "heat_floor": 0
+        },
+        {
+          "start": 1600,
+          "name": "山脊连续弯",
+          "kind": "ridge",
+          "traffic_speed": 20,
+          "pressure": 0.4,
+          "heat_floor": 0
+        },
+        {
+          "start": 2900,
+          "name": "货运走廊",
+          "kind": "freight",
+          "traffic_speed": 16,
+          "pressure": 0.6,
+          "heat_floor": 0
+        },
+        {
+          "start": 4100,
+          "name": "路边维修站",
+          "kind": "service",
+          "traffic_speed": 22,
+          "pressure": 0.0,
+          "heat_floor": 0
+        },
+        {
+          "start": 4700,
+          "name": "跨谷高架",
+          "kind": "bridge",
+          "traffic_speed": 24,
+          "pressure": 0.65,
+          "heat_floor": 0
+        },
+        {
+          "start": 6100,
+          "name": "警方追截区",
+          "kind": "pursuit",
+          "traffic_speed": 22,
+          "pressure": 0.5,
+          "heat_floor": 52
+        },
+        {
+          "start": 8100,
+          "name": "山口维修站",
+          "kind": "service",
+          "traffic_speed": 22,
+          "pressure": 0.0,
+          "heat_floor": 0
+        },
+        {
+          "start": 8700,
+          "name": "最后山路",
+          "kind": "ridge",
+          "traffic_speed": 18,
+          "pressure": 0.6,
+          "heat_floor": 0
+        },
+        {
+          "start": 10400,
+          "name": "终点争夺",
+          "kind": "final",
+          "traffic_speed": 24,
+          "pressure": 1.0,
+          "heat_floor": 70
+        }
+      ]
     }
   ],
   "difficulties": [

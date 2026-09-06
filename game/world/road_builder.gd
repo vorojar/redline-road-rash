@@ -45,7 +45,11 @@ func build(path: Path3D, data: Dictionary) -> void:
 		markings.material_override = paint
 		markings.visibility_range_end = 750
 		add_child(markings)
-	build_landscape(length)
+	if track.has("stages"):
+		build_corridor_landscape(length)
+		build_endurance_landmarks()
+	else:
+		build_landscape(length)
 	build_props(length)
 	build_hazards(length)
 	build_finish(length)
@@ -133,7 +137,16 @@ func land_height(pos: Vector3) -> float:
 		var direction = route.tangent(offset)
 		var side = Vector3(-direction.z,0,direction.x).dot(pos-center)
 		if side<0: height = lerpf(height,-16,smoothstep(12,95,distance))
+	if section_kind(offset)=="bridge": height-=28*smoothstep(10,24,distance)
 	return height
+
+func section_kind(distance: float) -> String:
+	if not track.has("stages"): return ""
+	var kind: String=track.stages[0].kind
+	for stage in track.stages:
+		if stage.start>distance: break
+		kind=stage.kind
+	return kind
 
 func build_landscape(length: float) -> void:
 	var low = Vector2(INF,INF)
@@ -201,6 +214,7 @@ func build_props(length: float) -> void:
 			rail_transforms.append(Transform3D(t.basis,route.point(s,side*8.5)+Vector3(0,.96,0)))
 			if track.theme == "coast" and side == -1:
 				continue
+			if section_kind(s) in ["freight","service","bridge"]: continue
 			for k in range(2 if track.theme == "forest" else 1):
 				var lane = side*rng.randf_range(12,65)
 				var pos = route.point(s+rng.randf_range(-3,3),lane)
@@ -242,7 +256,7 @@ func build_props(length: float) -> void:
 		if absf(curve)>.009:
 			sign_board(float(s), "<<" if curve>0 else ">>", Color("bba243"), 7.3 if curve>0 else -7.3, 1.55)
 	for s in range(500,int(length),500):
-		sign_board(float(s), "%s\n%d m" % ["PINE COUNTY" if track.id == "pine" else "COAST HIGHWAY",int(length)-s], Color("244b3c"), 7.1, 2.4)
+		sign_board(float(s), "%s\n%d m" % ["COUNTY RUN" if track.id=="interstate" else "PINE COUNTY" if track.id == "pine" else "COAST HIGHWAY",int(length)-s], Color("244b3c"), 7.1, 2.4)
 
 func sign_board(s: float, words: String, color: Color, lane: float, width: float) -> void:
 	var root = Node3D.new()
@@ -252,6 +266,7 @@ func sign_board(s: float, words: String, color: Color, lane: float, width: float
 	V.box(root,Vector3(.08,3.8,.08),Vector3(0,1.9,0),Color("8b8a80"))
 	V.box(root,Vector3(width,1.25,.09),Vector3(0,3.6,0),color)
 	var label = Label3D.new()
+	label.font = load("res://assets/fonts/RedlineUI.ttf")
 	label.text = words
 	label.font_size = 60
 	label.pixel_size = .008
@@ -292,3 +307,64 @@ func build_finish(length: float) -> void:
 	label.outline_size = 0
 	label.position = Vector3(0,5.2,.08)
 	root.add_child(label)
+
+func build_corridor_landscape(length: float) -> void:
+	# Long routes use terrain along the road corridor. A world-sized rectangular
+	# grid grows with the bounding box and wastes most of its mesh off screen.
+	for start in range(-100,int(length)+200,100):
+		for side in [-1,1]:
+			var tool=SurfaceTool.new()
+			tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+			for row in range(5):
+				for col in range(6):
+					for corner in [Vector2i(0,0),Vector2i(0,1),Vector2i(1,0),Vector2i(1,0),Vector2i(0,1),Vector2i(1,1)]:
+						var distance=float(start+(row+corner.y)*20)
+						var lane=side*(24+(col+corner.x)*35.0)
+						var pos=route.point(distance,lane)
+						pos.y=land_height(pos) if col+corner.x==0 else route.point(distance).y+sin(distance*.015+lane*.02)*18+cos(lane*.025)*12
+						tool.set_uv(Vector2(pos.x,pos.z)/9)
+						tool.add_vertex(pos)
+			tool.generate_normals()
+			var mesh=MeshInstance3D.new()
+			mesh.mesh=tool.commit();mesh.material_override=ground
+			mesh.visibility_range_end=1000
+			# The two sides have opposite winding; these distant hills need both faces.
+			mesh.material_override=ground.duplicate()
+			mesh.material_override.cull_mode=BaseMaterial3D.CULL_DISABLED
+			add_child(mesh)
+
+func build_endurance_landmarks() -> void:
+	for stage in track.stages:
+		sign_board(stage.start+30,stage.name,Color("244b3c"),7.2,3.6)
+		if stage.kind=="service":
+			for s in range(int(stage.start),int(stage.start)+450,50):
+				sign_board(s,"SERVICE / STOP",Color("355f84"),7.2,2.8)
+			var station=Node3D.new();add_child(station)
+			station.position=route.point(stage.start+130,13)
+			station.position.y=land_height(station.position)
+			station.rotation.y=route.yaw(stage.start+130)
+			V.box(station,Vector3(7,3.2,12),Vector3(0,1.6,0),Color("756f5a"))
+			V.box(station,Vector3(9,.3,14),Vector3(0,3.4,0),Color("303b40"))
+			for z in [-3,3]: V.box(station,Vector3(.08,1.8,2.4),Vector3(-3.55,1.1,z),Color("283d41"))
+		elif stage.kind=="freight":
+			for i in range(7):
+				var depot=Node3D.new();add_child(depot)
+				depot.position=route.point(stage.start+120+i*140,(-1 if i%2 else 1)*20)
+				depot.position.y=land_height(depot.position)
+				depot.rotation.y=route.yaw(stage.start+120+i*140)
+				V.box(depot,Vector3(16,7,28),Vector3(0,3.5,0),Color("858a83"))
+				V.box(depot,Vector3(17,.3,29),Vector3(0,7.1,0),Color("3e484b"))
+				for z in [-8,0,8]: V.box(depot,Vector3(.1,4,5),Vector3(-8.05,2,z),Color("39434a"))
+		elif stage.kind=="bridge":
+			for s in range(int(stage.start)+150,int(stage.start)+1000,25):
+				for side in [-1,1]:
+					var a=route.point(s,side*7.7)
+					var b=route.point(s+25,side*7.7)
+					bridge_beam(a,a+Vector3.UP*5,.28)
+					bridge_beam(a+Vector3.UP*4.9,b+Vector3.UP*4.9,.18)
+					bridge_beam(a+Vector3.UP*.8,b+Vector3.UP*4.9,.14)
+				bridge_beam(route.point(s,-7.7)+Vector3.UP*5,route.point(s,7.7)+Vector3.UP*5,.20)
+
+func bridge_beam(a: Vector3,b: Vector3,width: float) -> void:
+	var beam=V.box(self,Vector3(width,width,a.distance_to(b)),(a+b)*.5,Color("62787b"))
+	beam.look_at(b,Vector3.FORWARD if absf((b-a).normalized().dot(Vector3.UP))>.99 else Vector3.UP)

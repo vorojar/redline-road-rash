@@ -43,9 +43,14 @@ run_checked work/verify-engine-voice.log --headless --path "$ROOT" --script res:
 cat work/verify-engine-voice.log
 run_checked work/verify-finish-presentation.log --headless --path "$ROOT" --script res://tests/finish_presentation.gd
 cat work/verify-finish-presentation.log
+run_checked work/verify-endurance.log --headless --path "$ROOT" --script res://tests/endurance.gd
+cat work/verify-endurance.log
 run_checked work/verify-touch.log --headless --path "$ROOT" --script res://tests/touch_controls.gd
 cat work/verify-touch.log
 run_checked work/verify-pine.log --headless --path "$ROOT" --script res://tests/drive_soak.gd --fixed-fps 60
 rg 'SOAK_FINISH FINISH' work/verify-pine.log
 run_checked work/verify-coast.log --headless --path "$ROOT" --script res://tests/drive_soak.gd --fixed-fps 60 -- --coast
 rg 'SOAK_FINISH FINISH' work/verify-coast.log
+
+run_checked work/verify-long.log --headless --path "$ROOT" --script res://tests/drive_soak.gd --fixed-fps 60 -- --endurance
+rg 'SOAK_FINISH FINISH' work/verify-long.log

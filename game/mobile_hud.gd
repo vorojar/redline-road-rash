@@ -55,10 +55,10 @@ func draw_menu(h, height: float) -> void:
 	heading(h,"REDLINE" if race.mode=="ready" else ("车库 / GARAGE" if race.mode=="garage" else "驾驶设置"))
 	if race.mode == "ready":
 		h.panel(Rect2(16,92,436,252))
-		for i in range(2):
+		for i in range(race.career.catalog.tracks.size()):
 			var track: Dictionary = race.career.catalog.tracks[i]
-			h.button(Rect2(28,104+i*76,412,64),track.name+(" · 未解锁" if track.id not in race.career.unlocked else ""),func(): race.select_track(i),race.track.id==track.id)
-		h.button(Rect2(28,268,412,64),"开始比赛",func(): race.start(),true)
+			h.button(Rect2(28,99+i*59,412,52),track.name+(" · 12 km" if track.id=="interstate" else "")+(" · 未解锁" if track.id not in race.career.unlocked else ""),func(): race.select_track(i),race.track.id==track.id)
+		h.button(Rect2(28,282,412,56),"开始比赛",func(): race.start(),true)
 		h.panel(Rect2(478,92,458,92))
 		h.panel(Rect2(16,356,436,70))
 		h.text(race.career.bike().name,490,129,32,h.cream,true)
@@ -111,7 +111,8 @@ func draw_race(h, height: float) -> void:
 	else:
 		h.text(race.Combat.WEAPONS[p.weapon].name,624,49,24,h.gold)
 	h.bar(24,70,160,p.health,h.red if p.health<35 else Color("789463"))
-	h.bar(230,70,104,p.durability/p.max_durability*100,h.gold)
+	h.bar(230,70,104,p.durability/p.max_durability*100,h.red if p.condition_power()<.98 else h.gold)
+	if race.endurance.index>=0: h.text(race.endurance.stages[race.endurance.index].name,355,110,23,h.gold,true)
 	h.bar(362,70,210,p.stamina,Color("758e82"))
 	if race.mode in ["racing","countdown"]:
 		var rects: Dictionary = race.touch.layout(height,race.career.settings.touch_left_handed)

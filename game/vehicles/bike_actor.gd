@@ -7,6 +7,7 @@ const CrashRig = preload("res://game/vehicles/crash_rig.gd")
 const BIKE = preload("res://assets/models/motorcycle.glb")
 const RIDER = preload("res://assets/models/rider.glb")
 const V = preload("res://game/visuals.gd")
+var damage_visuals = preload("res://game/vehicles/damage_visuals.gd").new()
 var bike: Node3D
 var model_path: String = "res://assets/models/motorcycle.glb"
 var ride_speed: float = 0.0
@@ -107,6 +108,7 @@ func set_model(spec: Dictionary) -> void:
 		bike = load(model_path).instantiate()
 		add_child(bike)
 	tint(Color(spec.color))
+	damage_visuals.attach(self)
 
 func riding_grip(side: float) -> Vector3:
 	return Vector3(side*.39,grip_height,-grip_forward)
