@@ -1,0 +1,292 @@
+extends Node3D
+
+const V = preload("res://game/visuals.gd")
+var route: Path3D
+var track: Dictionary
+var asphalt: StandardMaterial3D
+var ground: StandardMaterial3D
+var roadside: StandardMaterial3D
+var hazards: Array[Dictionary] = []
+var road_meshes: int = 0
+var paint_tool: SurfaceTool
+
+func build(path: Path3D, data: Dictionary) -> void:
+	route = path
+	track = data
+	asphalt = texture_material("res://assets/textures/asphalt/Asphalt010_1K-JPG_Color.jpg", "res://assets/textures/asphalt/Asphalt010_1K-JPG_NormalGL.jpg", Color(0.72,0.72,0.72))
+	ground = texture_material("res://assets/textures/ground/Ground037_1K-JPG_Color.jpg", "res://assets/textures/ground/Ground037_1K-JPG_NormalGL.jpg", Color(0.32,0.35,0.30))
+	roadside = ground.duplicate()
+	roadside.albedo_color = Color(0.44,0.40,0.32)
+	var length = float(track.length)
+	for section in range(-1, int(length / 100) + 3):
+		var from = section * 100.0
+		add_strip(from, from + 100, -6.5, 6.5, 0, asphalt, true, 4.0)
+		for side in [-1,1]:
+			add_strip(from, from + 100, side * 6.5, side * 8.8, -0.015, roadside, true, 3.0)
+			add_terrain(from, from + 100, side)
+		paint_tool = SurfaceTool.new()
+		paint_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var white = V.material(Color("c9c6af"))
+		var yellow = V.material(Color("ac963e"))
+		for x in [-6.12,6.12]:
+			add_strip(from, from + 100, x - 0.045, x + 0.045, 0.017, white, false, 1)
+		for x in [-0.11,0.11]:
+			add_strip(from, from + 100, x - 0.035, x + 0.035, 0.02, yellow, false, 1)
+		for dash in range(10):
+			for x in [-3.12,3.12]:
+				add_strip(from+dash*10, from+dash*10+3.6, x-.035, x+.035, .023, white, false, 1)
+		paint_tool.generate_normals()
+		var markings = MeshInstance3D.new()
+		markings.mesh = paint_tool.commit()
+		var paint = StandardMaterial3D.new()
+		paint.vertex_color_use_as_albedo = true
+		paint.roughness = .9
+		markings.material_override = paint
+		markings.visibility_range_end = 750
+		add_child(markings)
+	build_landscape(length)
+	build_props(length)
+	build_hazards(length)
+	build_finish(length)
+	if track.theme == "coast":
+		var sea = V.box(self, Vector3(2400,.05,6500), Vector3(-1050,-8,-1900), Color("27434b"))
+		sea.material_override.roughness = .24
+
+func texture_material(color_path: String, normal_path: String, tint: Color) -> StandardMaterial3D:
+	var m = StandardMaterial3D.new()
+	m.albedo_texture = load(color_path)
+	m.albedo_color = tint
+	m.normal_enabled = true
+	m.normal_texture = load(normal_path)
+	m.normal_scale = .65
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	m.roughness = .93
+	return m
+
+func add_strip(start: float, end: float, left: float, right: float, height: float, mat: Material, collide: bool, uv_scale: float) -> void:
+	var st = SurfaceTool.new() if collide else paint_tool
+	if collide:
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	if left > right:
+		var tmp = left
+		left = right
+		right = tmp
+	var count = maxi(1, int((end-start)/4.0))
+	for i in range(count):
+		var a = lerpf(start,end,float(i)/count)
+		var b = lerpf(start,end,float(i+1)/count)
+		var positions = [route.point(a,left),route.point(a,right),route.point(b,left),route.point(b,right)]
+		var uvs = [Vector2(left/uv_scale,a/uv_scale),Vector2(right/uv_scale,a/uv_scale),Vector2(left/uv_scale,b/uv_scale),Vector2(right/uv_scale,b/uv_scale)]
+		for index in [0,2,1,1,2,3]:
+			if not collide:
+				st.set_color(mat.albedo_color)
+			st.set_uv(uvs[index])
+			st.add_vertex(positions[index]+Vector3.UP*height)
+	if not collide:
+		return
+	st.generate_normals()
+	var mesh = MeshInstance3D.new()
+	mesh.mesh = st.commit()
+	mesh.material_override = mat
+	mesh.visibility_range_end = 750
+	mesh.visibility_range_end_margin = 60
+	add_child(mesh)
+	if collide:
+		mesh.create_trimesh_collision()
+	road_meshes += 1
+
+func add_terrain(start: float, end: float, side: int) -> void:
+	var st = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var offsets = [8.8, 13.0, 18.0, 24.0]
+	for i in range(10):
+		for j in range(offsets.size()-1):
+			var corners: Array[Vector3] = []
+			for pair in [[i,j],[i,j+1],[i+1,j],[i+1,j+1]]:
+				var s = lerpf(start,end,float(pair[0])/10)
+				var lateral = offsets[pair[1]]
+				var pos = route.point(s,side*lateral)
+				pos.y = lerpf(pos.y-.06,land_height(pos),smoothstep(8.8,24,lateral))
+				corners.append(pos)
+			for index in ([0,2,1,1,2,3] if side == 1 else [0,1,2,1,3,2]):
+				st.set_uv(Vector2(corners[index].x,corners[index].z)/9)
+				st.add_vertex(corners[index])
+	st.generate_normals()
+	var mesh = MeshInstance3D.new()
+	mesh.mesh = st.commit()
+	mesh.material_override = ground
+	mesh.visibility_range_end = 950
+	add_child(mesh)
+	mesh.create_trimesh_collision()
+
+func land_height(pos: Vector3) -> float:
+	# A world-space height field cannot fold over itself on hairpins.
+	var offset = route.curve.get_closest_offset(Vector3(pos.x,0,pos.z))
+	var center = route.point(offset)
+	var delta = Vector2(pos.x-center.x,pos.z-center.z)
+	var distance = delta.length()
+	var relief = smoothstep(12,160,distance)
+	var noise = sin(pos.x*.015+pos.z*.013)*11+cos(pos.z*.024-pos.x*.011)*7+sin(pos.x*.037)*3
+	var height = center.y-1.2+relief*(noise+22)
+	if track.theme=="coast":
+		var direction = route.tangent(offset)
+		var side = Vector3(-direction.z,0,direction.x).dot(pos-center)
+		if side<0: height = lerpf(height,-16,smoothstep(12,95,distance))
+	return height
+
+func build_landscape(length: float) -> void:
+	var low = Vector2(INF,INF)
+	var high = Vector2(-INF,-INF)
+	for s in range(0,int(length)+150,50):
+		var point = route.point(float(s))
+		low = low.min(Vector2(point.x,point.z))
+		high = high.max(Vector2(point.x,point.z))
+	low -= Vector2(320,320)
+	high += Vector2(320,320)
+	var step = 12.0
+	var cols = int((high.x-low.x)/step)+1
+	var rows = int((high.y-low.y)/step)+1
+	var vertices: Array[Vector3] = []
+	for row in range(rows+1):
+		for col in range(cols+1):
+			var point = Vector3(low.x+col*step,0,low.y+row*step)
+			point.y = land_height(point)
+			vertices.append(point)
+	for first in range(0,rows,20):
+		var st = SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for row in range(first,mini(first+20,rows)):
+			for col in range(cols):
+				var a = row*(cols+1)+col
+				for index in [a,a+1,a+cols+1,a+1,a+cols+2,a+cols+1]:
+					var point = vertices[index]
+					st.set_uv(Vector2(point.x,point.z)/9)
+					st.add_vertex(point)
+		st.generate_normals()
+		var mesh = MeshInstance3D.new()
+		mesh.mesh = st.commit()
+		mesh.material_override = ground
+		mesh.visibility_range_end = 1200
+		add_child(mesh)
+
+func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: float) -> void:
+	# Split batches spatially so distant scenery is actually culled.
+	for offset in range(0,transforms.size(),40):
+		var node = MultiMeshInstance3D.new()
+		var mm = MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = mini(40,transforms.size()-offset)
+		for j in range(mm.instance_count):
+			mm.set_instance_transform(j,transforms[offset+j])
+		node.multimesh = mm
+		node.material_override = mat
+		node.visibility_range_end = distance
+		node.visibility_range_end_margin = 50
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(node)
+
+func build_props(length: float) -> void:
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 329 if track.id == "pine" else 827
+	var tree_transforms: Array[Transform3D] = []
+	var post_transforms: Array[Transform3D] = []
+	var rail_transforms: Array[Transform3D] = []
+	for i in range(-2,int(length/8)+12):
+		var s = i*8.0
+		for side in [-1,1]:
+			var t = Transform3D(Basis(Vector3.UP,route.yaw(s)),route.point(s,side*8.5)+Vector3(0,.54,0))
+			post_transforms.append(t)
+			rail_transforms.append(Transform3D(t.basis,route.point(s,side*8.5)+Vector3(0,.96,0)))
+			if track.theme == "coast" and side == -1:
+				continue
+			for k in range(2 if track.theme == "forest" else 1):
+				var lane = side*rng.randf_range(12,65)
+				var pos = route.point(s+rng.randf_range(-3,3),lane)
+				var height = rng.randf_range(8,15)
+				pos.y = lerpf(pos.y-.06,land_height(pos),smoothstep(8.8,24,absf(lane)))+height*.5
+				var b = Basis.IDENTITY.scaled(Vector3(height*.65,height,1))
+				tree_transforms.append(Transform3D(b,pos))
+	var post = BoxMesh.new()
+	post.size = Vector3(.10,1.08,.12)
+	multi(post,post_transforms,V.material(Color("72716b"),.6),450)
+	var rail_body = StaticBody3D.new()
+	rail_body.collision_layer = 1
+	add_child(rail_body)
+	for transform_value in rail_transforms:
+		var collider = CollisionShape3D.new()
+		var rail_shape = BoxShape3D.new()
+		rail_shape.size = Vector3(.12,.38,8.15)
+		collider.shape = rail_shape
+		collider.transform = transform_value
+		rail_body.add_child(collider)
+	var rail = BoxMesh.new()
+	rail.size = Vector3(.07,.26,8.15)
+	multi(rail,rail_transforms,V.material(Color("99988d"),.6),650)
+	var quad = QuadMesh.new()
+	quad.size = Vector2.ONE
+	var leaf = StandardMaterial3D.new()
+	leaf.albedo_texture = load("res://assets/textures/roadside_pine.png")
+	leaf.albedo_color = Color(.78,.80,.72)
+	leaf.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	leaf.alpha_scissor_threshold = .45
+	leaf.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	leaf.billboard_keep_scale = true
+	leaf.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	leaf.cull_mode = BaseMaterial3D.CULL_DISABLED
+	multi(quad,tree_transforms,leaf,850)
+	for s in range(110,int(length),36):
+		var curve = route.curvature(float(s))
+		if absf(curve)>.009:
+			sign_board(float(s), "<<" if curve>0 else ">>", Color("bba243"), 7.3 if curve>0 else -7.3, 1.55)
+	for s in range(500,int(length),500):
+		sign_board(float(s), "%s\n%d m" % ["PINE COUNTY" if track.id == "pine" else "COAST HIGHWAY",int(length)-s], Color("244b3c"), 7.1, 2.4)
+
+func sign_board(s: float, words: String, color: Color, lane: float, width: float) -> void:
+	var root = Node3D.new()
+	add_child(root)
+	root.position = route.point(s,lane)
+	root.rotation.y = route.yaw(s)
+	V.box(root,Vector3(.08,3.8,.08),Vector3(0,1.9,0),Color("8b8a80"))
+	V.box(root,Vector3(width,1.25,.09),Vector3(0,3.6,0),color)
+	var label = Label3D.new()
+	label.text = words
+	label.font_size = 60
+	label.pixel_size = .008
+	label.modulate = Color("e7e2cc")
+	label.outline_size = 0
+	label.position = Vector3(0,3.6,.06)
+	root.add_child(label)
+
+func build_hazards(length: float) -> void:
+	for s in [650.0,1490.0,2410.0]:
+		if s > length:
+			continue
+		sign_board(s-90,"ROAD WORK\n80 m",Color("b36527"),7,2.2)
+		for j in range(5):
+			var lane = 5.5-j*.15
+			var pos = route.point(s+j*4,lane)
+			var cone = Node3D.new()
+			add_child(cone)
+			cone.position = pos
+			V.box(cone,Vector3(.55,.06,.55),Vector3(0,.03,0),Color("292821"))
+			var top = V.cylinder(cone,.21,.65,Vector3(0,.37,0),Color("c2652a"))
+			(top.mesh as CylinderMesh).top_radius = .035
+			hazards.append({"s":s+j*4,"lane":lane,"radius":.5,"hit":false,"node":cone})
+
+func build_finish(length: float) -> void:
+	var root = Node3D.new()
+	add_child(root)
+	root.position = route.point(length)
+	root.rotation.y = route.yaw(length)
+	for side in [-1,1]:
+		V.box(root,Vector3(.20,5.6,.20),Vector3(side*7.2,2.8,0),Color("494b46"))
+	V.box(root,Vector3(14.7,.75,.12),Vector3(0,5.2,0),Color("d5d0b7"))
+	var label = Label3D.new()
+	label.text = "F I N I S H"
+	label.font_size = 120
+	label.pixel_size = .005
+	label.modulate = Color("22231f")
+	label.outline_size = 0
+	label.position = Vector3(0,5.2,.08)
+	root.add_child(label)

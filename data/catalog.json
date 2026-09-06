@@ -1,0 +1,104 @@
+{
+  "bikes": [
+    {
+      "id": "ratchet",
+      "name": "RATCHET 750",
+      "description": "风冷四缸 · 钢管车架 · 易于控制",
+      "price": 0,
+      "top_speed": 53.0,
+      "acceleration": 12.8,
+      "handling": 5.0,
+      "durability": 100.0,
+      "color": "8b211a",
+      "model": "res://assets/models/motorcycle.glb",
+      "grip_height": 1.09,
+      "grip_forward": 0.51,
+      "wheelbase": 1.0,
+      "body_style": "NAKED / 经典街车"
+    },
+    {
+      "id": "revenant",
+      "name": "REVENANT 900",
+      "description": "高扭矩 · 强化车架 · 耐久优势",
+      "price": 1800,
+      "top_speed": 57.0,
+      "acceleration": 14.0,
+      "handling": 4.6,
+      "durability": 125.0,
+      "color": "253c42",
+      "model": "res://assets/models/revenant.glb",
+      "grip_height": 1.21,
+      "grip_forward": 0.6,
+      "wheelbase": 1.18,
+      "body_style": "MUSCLE / 长轴肌肉车"
+    },
+    {
+      "id": "phantom",
+      "name": "PHANTOM 1100",
+      "description": "轻量车身 · 高转速 · 极限极速",
+      "price": 5200,
+      "top_speed": 63.0,
+      "acceleration": 16.0,
+      "handling": 5.5,
+      "durability": 90.0,
+      "color": "bfc2bd",
+      "model": "res://assets/models/phantom.glb",
+      "grip_height": 1.09,
+      "grip_forward": 0.51,
+      "wheelbase": 1.0,
+      "body_style": "SPORT / 全包围跑车"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "pine",
+      "name": "松岭公路",
+      "subtitle": "PINE COUNTY / ROUTE 09",
+      "length": 3000.0,
+      "theme": "forest",
+      "prize": [
+        1200,
+        800,
+        500,
+        250,
+        150,
+        100
+      ]
+    },
+    {
+      "id": "coast",
+      "name": "海岸断崖",
+      "subtitle": "COAST HIGHWAY / ROUTE 17",
+      "length": 3600.0,
+      "theme": "coast",
+      "prize": [
+        1800,
+        1200,
+        750,
+        350,
+        200,
+        150
+      ]
+    }
+  ],
+  "difficulties": [
+    {
+      "name": "休闲",
+      "speed": 0.85,
+      "damage": 0.65,
+      "heat": 0.6
+    },
+    {
+      "name": "经典",
+      "speed": 1.0,
+      "damage": 1.0,
+      "heat": 1.0
+    },
+    {
+      "name": "硬派",
+      "speed": 1.08,
+      "damage": 1.25,
+      "heat": 1.25
+    }
+  ]
+}

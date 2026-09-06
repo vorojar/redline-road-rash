@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101713">
+<meta name="description" content="REDLINE 公路狂徒：3D 摩托竞速与近战格斗。直接在桌面浏览器驾驶、倾车过弯、挥棒争夺名次。">
+<title>$GODOT_PROJECT_NAME · 在线试玩</title>
+$GODOT_HEAD_INCLUDE
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#101713;color:#ded9c6;font-family:system-ui,sans-serif;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}#launch{position:fixed;inset:0;display:grid;place-items:center;background:#101713;z-index:2;padding:24px}.panel{max-width:580px;width:100%}.eyebrow{color:#b6a15a;letter-spacing:.23em;font-size:12px}h1{font-size:clamp(46px,10vw,76px);font-weight:800;letter-spacing:-.05em;margin:12px 0 0}h2{font-size:21px;font-weight:400;color:#b5b8ab;margin:2px 0 28px}p{line-height:1.8;color:#a8afa2}button{border:0;border-radius:3px;padding:17px 30px;background:#a5352b;color:#fff3df;font:700 18px system-ui;cursor:pointer;width:100%;margin-top:16px}button:disabled{opacity:.6;cursor:wait}button:focus-visible,a:focus-visible{outline:2px solid #c6af65;outline-offset:4px}progress{display:block;width:100%;height:8px;accent-color:#b6a15a;margin:20px 0 8px}#status{font-size:14px;min-height:24px}.keys{font-size:13px;line-height:1.9;border-top:1px solid #384037;margin-top:26px;padding-top:18px}a{color:#b6a15a;text-underline-offset:4px}.links{display:flex;gap:22px;font-size:13px;margin-top:20px}[hidden]{display:none!important}.hint{font-size:12px;color:#858d80}#error{white-space:pre-wrap;color:#f0a194;max-height:120px;overflow:auto;font-size:13px}
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="0" aria-label="REDLINE 摩托竞速游戏"></canvas>
+<section id="launch"><div class="panel">
+<div class="eyebrow">HIGHWAY COMBAT / v0.5</div><h1>REDLINE</h1><h2>公路狂徒</h2>
+<p>弯道之前收油，出弯抢回位置。<br>三款摩托、两条公路，一路竞速与近身格斗。</p>
+<button id="play" type="button">进入游戏 · 开启声音</button>
+<progress id="progress" max="100" value="0" hidden></progress><div id="status" role="status"></div><div id="error" role="alert" hidden></div>
+<div class="keys">WASD / 方向键驾驶 · J 拳击 · K 踢击 · L 武器<br>U 格挡 · I 闪避 · O 夺械 · Shift 蓄力后松开冲刺 · Esc 暂停</div>
+<p class="hint">桌面键盘版 · 首次载入约 85 MB，请稍候。进度保存在当前浏览器；清除网站数据会删除存档。</p>
+<div class="links"><a href="https://github.com/vorojar/redline-road-rash" target="_blank" rel="noopener">项目源码</a><a href="credits.html" target="_blank" rel="noopener">素材与授权</a></div>
+<noscript>请启用 JavaScript 后再打开游戏。</noscript>
+</div></section>
+<script src="$GODOT_URL"></script>
+<script>
+const config=$GODOT_CONFIG;
+const engine=new Engine(config);
+const play=document.getElementById('play'), status=document.getElementById('status'), progress=document.getElementById('progress');
+play.addEventListener('click',async()=>{
+ play.disabled=true;
+ const missing=Engine.getMissingFeatures({threads:$GODOT_THREADS_ENABLED});
+ if(missing.length){fail(new Error('浏览器缺少所需支持：'+missing.join(', ')+'。请使用桌面版 Chrome、Edge 或 Firefox。'));return;}
+ progress.hidden=false;status.textContent='正在下载游戏…';
+ try{
+  await engine.startGame({onProgress:(current,total)=>{if(total>0){progress.value=current/total*100;status.textContent=current>=total?'正在准备赛道和车辆，请稍候…':`正在下载游戏… ${Math.round(current/total*100)}%`;}},onExit:()=>location.reload()});
+  document.getElementById('launch').hidden=true;document.getElementById('canvas').focus();document.body.dataset.gameReady='true';
+ }catch(error){fail(error);}
+});
+function fail(error){console.error(error);status.textContent='游戏未能加载';const output=document.getElementById('error');output.hidden=false;output.textContent=String(error.message||error);play.disabled=false;play.textContent='重新载入';play.onclick=()=>location.reload();}
+</script>
+</body>
+</html>

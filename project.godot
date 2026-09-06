@@ -1,0 +1,26 @@
+config_version=5
+
+[application]
+config/name="REDLINE • 公路狂徒"
+run/main_scene="res://game/main.tscn"
+config/version="0.5.0"
+config/icon="res://assets/branding/redline.png"
+config/macos_native_icon="res://assets/branding/redline.icns"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+
+[display]
+window/size/viewport_width=1440
+window/size/viewport_height=900
+window/size/window_width_override=1280
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.65, 0.76, 0.78, 1)
+textures/default_filters/use_nearest_mipmap_filter=false
+anti_aliasing/quality/msaa_3d=1
+textures/vram_compression/import_etc2_astc=true
+
+[physics]
+common/physics_ticks_per_second=60

@@ -1,0 +1,14 @@
+.godot/
+.tools/
+.DS_Store
+*.log
+work/
+outputs/
+*.blend1
+.agent/
+AGENTS.md
+task.md
+.env
+.env.*
+!.env.example
+assets/audio/source/*.wav
