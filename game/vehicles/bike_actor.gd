@@ -1,5 +1,6 @@
 extends CharacterBody3D
 
+const WeaponMotion = preload("res://game/vehicles/weapon_motion.gd")
 const Combat = preload("res://game/systems/combat.gd")
 const RecoveryMotion = preload("res://game/vehicles/recovery_motion.gd")
 const CrashRig = preload("res://game/vehicles/crash_rig.gd")
@@ -64,6 +65,7 @@ func _ready() -> void:
 	for i in range(skeleton.get_bone_count()):
 		bone_ids[skeleton.get_bone_name(i).trim_suffix("_2")] = i
 	bat = V.cylinder(self,.03,.85,Vector3.ZERO,Color("745039"))
+	V.cylinder(bat,.027,.18,Vector3(0,-.31,0),Color("262523"))
 	bat.visible = false
 	for z in [-.67,.67]:
 		var probe = RayCast3D.new()
@@ -152,7 +154,7 @@ func ground_move(target: Vector3, yaw: float, dt: float) -> void:
 	spring_height = .035-(front_compression+rear_compression)*.5
 	suspension_pitch = atan2(rear_compression-front_compression,1.34)
 
-func bone(name: String, a: Vector3, b: Vector3) -> void:
+func bone(name: String, a: Vector3, b: Vector3, roll: float = 0) -> void:
 	if not bone_ids.has(name):
 		return
 	if recovery_blend<1 and recovery_segments.has(name):
@@ -166,7 +168,7 @@ func bone(name: String, a: Vector3, b: Vector3) -> void:
 	var length_key = name.trim_suffix("_L").trim_suffix("_R")
 	skeleton.set_bone_pose_scale(index,Vector3(1,(b-a).length()/float(LENGTHS[length_key]),1))
 	skeleton.set_bone_pose_position(index,a)
-	skeleton.set_bone_pose_rotation(index,(Basis(rotation_to)*rest.basis).get_rotation_quaternion())
+	skeleton.set_bone_pose_rotation(index,(Basis((b-a).normalized(),roll)*Basis(rotation_to)*rest.basis).get_rotation_quaternion())
 
 func set_combat(weapon: int, guard: bool, dodge: float, charge: float) -> void:
 	held_weapon = weapon
@@ -234,16 +236,17 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 	var duck = sin(clampf(dodging/.38,0,1)*PI) if dodging>0 else 0.0
 	shoulder += Vector3(0,-.12*duck,-.07*duck)
 	head_start += Vector3(0,-.15*duck,-.07*duck)
-	var delay: float = [.12,.20,.27][kind]
-	var age = delay+.44-attack
-	var prepare = smoothstep(0,delay*.55,age) if attack>0 else 0.0
-	var strike = smoothstep(delay*.55,delay,age) if attack>0 else 0.0
-	var recover = smoothstep(delay+.08,delay+.44,age) if attack>0 else 0.0
+	var delay: float = Combat.DELAYS[kind]
+	var moving = attack>0 or windup>0
+	var age = delay*(1-clampf(windup/Combat.WINDUPS[kind],0,1)) if windup>0 else delay+Combat.RECOVERY-attack
+	var prepare = smoothstep(0,delay*.55,age) if moving else 0.0
+	var strike = smoothstep(delay*.55,delay,age) if moving else 0.0
+	var recover = smoothstep(delay+.08,delay+Combat.RECOVERY,age) if moving else 0.0
 	var effort = prepare*(1-recover)
-	var twist = side*lerpf(-.22 if kind==0 else -.42,.42 if kind==0 else .72,strike)*effort if kind!=1 else side*.18*effort
-	var shoulder_basis = Basis(Vector3.UP,twist)
-	shoulder += Vector3(side*.08*strike,.10*effort,.05*effort)
-	head_start += Vector3(side*.07*strike,.10*effort,.02*effort)
+	var twist = side*lerpf(-.22 if kind==0 else -.28,.42 if kind==0 else .38,strike)*effort if kind!=1 else side*.18*effort
+	var shoulder_basis = Basis((shoulder-hip).normalized(),twist)
+	shoulder += Vector3(side*.025*strike,.025*effort,-.12*effort)
+	head_start += Vector3(side*.03*strike,.025*effort,-.12*effort)
 	var recoil_age = time-recoil_started
 	if recoil_age>=0 and recoil_age<recoil_duration and not just_recovered:
 		var impact_recoil = sin(clampf(recoil_age/.07,0,1)*PI*.5)*pow(1-recoil_age/recoil_duration,2)*recoil_strength
@@ -254,7 +257,7 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 		shoulder += Vector3(-side*.13*recoil,-.055*recoil,.09*recoil)
 		head_start += Vector3(-side*.17*recoil,-.08*recoil,.10*recoil)
 	bone("hips",hip,hip+Vector3(0,.15,0))
-	bone("spine",hip+Vector3(0,.06,-.04),shoulder)
+	bone("spine",hip+Vector3(0,.06,-.04),shoulder,twist)
 	bone("head",head_start,head_start+Vector3(0,.33,-.04))
 	for sign_value in [-1,1]:
 		var suffix = "L" if sign_value < 0 else "R"
@@ -267,9 +270,13 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 			hand = hand.lerp(arm_start+Vector3(sign_value*.27,.50,-.08),celebration)
 		elif guarding:
 			hand = head_start+Vector3(sign_value*.15,.1,-.21)
+		elif held_weapon>0 and sign_value==1 and (kind==2 or not moving):
+			var motion = WeaponMotion.sample(arm_start,side,age,moving and kind==2)
+			hand = motion.hand
+			weapon_direction = motion.axis
 		elif windup>0 and sign_value==side:
-			hand = hand.lerp(arm_start+Vector3(side*.13,.28,.22),smoothstep(0,.35,[.55,.8,.72][kind]-windup))
-		elif attack>0 and sign_value==side:
+			hand = hand.lerp(arm_start+Vector3(side*.13,.28,.22),smoothstep(0,.35,Combat.WINDUPS[kind]-windup))
+		elif attack>0 and sign_value==side and kind!=2:
 			if kind==1:
 				ankle = ankle.lerp(Vector3(side*.91,.79,-.14),effort*strike)
 			else:
@@ -288,8 +295,10 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 		var elbow = RecoveryMotion.bend(arm_start,hand,.312,.281,Vector3(sign_value*.8,-.5,.5))
 		ankle = leg_start+(ankle-leg_start).limit_length(.842)
 		var knee = RecoveryMotion.bend(leg_start,ankle,.43,.42,Vector3(sign_value*.5,-.1,-1))
-		if held_weapon>0 and sign_value==side:
+		if held_weapon>0 and sign_value==1:
 			bat.visible = true
+			bat.mesh.top_radius = .043 if held_weapon==1 else .027
+			bat.mesh.bottom_radius = .024 if held_weapon==1 else .027
 			bat.material_override.albedo_color = Color("856044") if held_weapon==1 else Color("9babad")
 			bat.material_override.metallic = 0.0 if held_weapon==1 else .85
 			bat.position = rider.transform*(hand+weapon_direction*.32)

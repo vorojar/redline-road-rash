@@ -37,6 +37,8 @@ run_checked work/verify-combat-personality.log --headless --path "$ROOT" --scrip
 cat work/verify-combat-personality.log
 run_checked work/verify-mouse-combat.log --headless --path "$ROOT" --script res://tests/mouse_combat.gd
 cat work/verify-mouse-combat.log
+run_checked work/verify-weapon-motion.log --headless --path "$ROOT" --script res://tests/weapon_motion.gd
+cat work/verify-weapon-motion.log
 run_checked work/verify-engine-voice.log --headless --path "$ROOT" --script res://tests/engine_voice.gd
 cat work/verify-engine-voice.log
 run_checked work/verify-finish-presentation.log --headless --path "$ROOT" --script res://tests/finish_presentation.gd

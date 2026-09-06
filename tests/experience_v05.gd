@@ -20,6 +20,7 @@ func run() -> void:
 	var actor = race.player_mesh
 	for spec in race.career.catalog.bikes:
 		actor.set_model(spec)
+		actor.set_combat(1,false,0,0)
 		actor.ride_speed = 0
 		var upright = actor.riding_anchors()
 		actor.ride_speed = 55
@@ -32,13 +33,16 @@ func run() -> void:
 				good = good and absf(actor.segments["upper_arm_"+side][0].distance_to(actor.segments["upper_arm_"+side][1])-.312)<.01
 				good = good and absf(actor.segments["forearm_"+side][0].distance_to(actor.segments["forearm_"+side][1])-.281)<.01
 		check(good,spec.id+" 挥击全程肘臂长度稳定")
+	actor.set_combat(1,false,0,0)
+	actor.pose(0,0,0,0,0,1,2)
+	var carry: Vector3 = actor.segments.forearm_R[1]
 	actor.pose(0,0,0,0,.70,1,2)
 	var chamber: Vector3 = actor.segments.forearm_R[1]
 	actor.pose(0,0,0,0,.44,1,2)
 	var contact: Vector3 = actor.segments.forearm_R[1]
 	actor.pose(0,0,0,0,.02,1,2)
 	var returned: Vector3 = actor.segments.forearm_R[1]
-	check(contact.x>chamber.x+.2 and returned.distance_to(actor.riding_grip(1))<.04,"挥棒在判定时刻外展，随后收回车把")
+	check(contact.x>chamber.x+.2 and returned.distance_to(carry)<.04,"挥棒在判定时刻外展，随后回到持械待机姿态")
 	for id in ["pine","coast"]:
 		race.route.curve=load("res://data/tracks/"+id+".tres")
 		var left = 0

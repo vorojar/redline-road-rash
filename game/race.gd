@@ -436,9 +436,9 @@ func attack(kind: int) -> bool:
 		return false
 	sound.swing(kind)
 	pending_kind = kind
-	pending_attack = [.12,.20,.27][kind]
+	pending_attack = Combat.DELAYS[kind]
 	player.cooldown = [.48,.78,.95][kind]
-	player.attack_time = .44+pending_attack
+	player.attack_time = Combat.RECOVERY+pending_attack
 	player.attack_kind = kind
 	attack_target = nearest_target()
 	if attack_target>=0:
@@ -450,7 +450,7 @@ func resolve_attack() -> bool:
 	if attack_target<0 or player.crash_timer>0:
 		return false
 	var r = racers[attack_target]
-	if r.crash>0 or r.finished or (r.lane-player.lane)*player.attack_side<0 or absf(r.s-player.distance)>2.6 or absf(r.lane-player.lane)>[2.05,2.55,3.1][pending_kind]:
+	if r.crash>0 or r.finished or (r.lane-player.lane)*player.attack_side<0 or absf(r.s-player.distance)>2.6 or absf(r.lane-player.lane)>Combat.REACH[pending_kind]:
 		return false
 	if r.dodge > 0:
 		notify(r.name+" 闪过攻击")

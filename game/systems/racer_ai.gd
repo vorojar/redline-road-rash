@@ -190,7 +190,7 @@ static func update(race: Node3D, dt: float) -> void:
 		if r.windup>0:
 			r.windup -= dt
 			if r.windup<=0:
-				r.attack_time = .44
+				r.attack_time = Combat.RECOVERY
 				if close and r.stagger<=0 and (target_lane-r.lane)*r.attack_side>0:
 					if r.stealing: Combat.racer_grab(race,r,r.combat_target)
 					elif r.combat_target==-1: Combat.enemy_strike(race,r)
@@ -201,7 +201,7 @@ static func update(race: Node3D, dt: float) -> void:
 			r.stealing = steal_opportunity(race,r)
 			r.kind = 0 if r.stealing else 1 if r.style==2 else 2 if r.weapon>0 else 0
 			r.attack_side = -1.0 if target_lane<r.lane else 1.0
-			r.windup = [.55,.8,.72][r.kind]
+			r.windup = Combat.WINDUPS[r.kind]
 			if r.combat_target==-1 and r.stealing: race.notify(r.name+" 伸手夺械！格挡或闪避",1.0)
 			elif r.combat_target==-1: race.notify(r.name+[" 挥拳"," 抬腿"," 举起"+Combat.WEAPONS[r.weapon].name][r.kind]+"！U 格挡 / I 闪避",1.0)
 		for car in race.traffic:

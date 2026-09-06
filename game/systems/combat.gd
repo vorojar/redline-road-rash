@@ -1,5 +1,10 @@
 extends RefCounted
 
+const DELAYS = [.12,.20,.27]
+const WINDUPS = [.55,.8,.72]
+const RECOVERY = .44
+const REACH = [2.05,2.55,2.25]
+
 const WEAPONS = [
 	{"name":"空手","damage":0.0},
 	{"name":"木棒","damage":28.0},
