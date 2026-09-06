@@ -276,7 +276,7 @@ func draw_race() -> void:
 	if race.mode=="racing" and p.crash_timer<=0:
 		var preview = race.route.curvature(p.distance+maxf(25,p.speed*1.4))
 		if absf(preview)>.006:
-			var advised = int(sqrt(16/absf(preview))*3.6/10)*10
+			var advised = int(p.corner_speed(preview,p.top_speed,p.handling)*3.6/10)*10
 			panel(Rect2(532,28,370,68))
 			text(("左弯  <<" if preview>0 else ">>  右弯")+"   建议 %d km/h" % advised,551,57,20,gold,true)
 			text("入弯前收油 / 刹车" if p.speed*3.6>advised+10 else "保持选线 · 出弯加速",551,82,15,red if p.speed*3.6>advised+10 else faded)

@@ -79,7 +79,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 			invulnerable = 2.5
 			lateral_velocity = 0
 		return
-	var cap = top_speed+12 if boost else top_speed
+	var cap = corner_speed(curve_force,top_speed+12 if boost else top_speed,handling)
 	var target_accel = throttle*(acceleration+(6 if boost else 0)) - brake*32 - 1.8 - ground_slope*8
 	if speed<=cap:
 		speed = clampf(speed+target_accel*dt,0,cap)
@@ -89,18 +89,15 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	var response = handling*lerpf(1.12,.80,clampf(speed/65,0,1))
 	var desired_lateral = steer*response*clampf(speed/8,0,1)
 	lateral_velocity = move_toward(lateral_velocity,desired_lateral,dt*15)
-	lane += (lateral_velocity+curve_force*speed*speed*.055)*dt
+	# Outward drift adds steering work, but never exceeds half the available steering.
+	var drift = clampf(curve_force*speed*speed*.022,-response*.45,response*.45)
+	lane += (lateral_velocity+drift)*dt
 	if assist and absf(steer) < .1:
 		lane = move_toward(lane,clampf(lane,-5.7,5.7),dt*1.5)
-	var corner_load = absf(curve_force)*speed*speed
 	lean = lerpf(lean,clampf(atan(curve_force*speed*speed/9.8)*.65-lateral_velocity/handling*.25,-.78,.78),minf(dt*8,1))
-	if corner_load>19:
-		stability -= (corner_load-19)*dt*1.6
 	if absf(lane)>6.5:
 		speed = move_toward(speed,25,dt*12)
-		stability -= dt*16
-	else:
-		stability = minf(100,stability+dt*(7 if corner_load<19 else 0))
+	stability = minf(100,stability+dt*7)
 	if absf(lane)>8.1:
 		lane = clampf(lane,-8.1,8.1)
 		damage(5,26)
@@ -139,6 +136,10 @@ func credit_ko(environment: bool) -> void:
 	combo += 1
 	best_combo = maxi(best_combo,combo)
 	combo_timer = 10
+
+# Arcade cornering trades a little speed for grip; impacts own the fall penalty.
+static func corner_speed(curvature: float, maximum: float, agility: float) -> float:
+	return maximum/sqrt(1.0+absf(curvature)*60.0/agility)
 
 static func collision_severity(relative_speed: float, overlap: float) -> float:
 	return clampf(relative_speed/55 * lerpf(.18,1.0,clampf(overlap,0,1)),0,1)

@@ -52,8 +52,9 @@ func run() -> void:
 	var fast = Bike.new()
 	fast.speed=53
 	fast.curve_force=.017
-	for i in range(180):fast.drive(1.0/60,1,0,-.6,false)
-	check(fast.crashes>0,"紧弯持续全油门会失稳")
+	for i in range(180):
+		fast.drive(1.0/60,1,0,clampf((2-fast.lane)*1.8-fast.lateral_velocity*.22,-1,1),false)
+	check(fast.crashes==0 and fast.speed<53 and fast.speed>40,"紧弯全油门轻微减速且可保持路线")
 	var controlled = Bike.new()
 	controlled.speed=28
 	controlled.curve_force=.017

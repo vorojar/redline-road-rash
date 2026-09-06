@@ -115,7 +115,7 @@ func draw_race(h, height: float) -> void:
 
 		var preview: float = race.route.curvature(p.distance+maxf(25,p.speed*1.4))
 		if absf(preview)>.006:
-			var advised = int(sqrt(16/absf(preview))*3.6/10)*10
+			var advised = int(p.corner_speed(preview,p.top_speed,p.handling)*3.6/10)*10
 			h.panel(Rect2(288,102,384,48))
 			h.text(("左弯" if preview>0 else "右弯")+" · 建议 %d km/h" % advised,308,135,26,h.gold)
 		if race.message_time>0:

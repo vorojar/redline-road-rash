@@ -51,7 +51,7 @@ func _physics_process(dt):
 		if car.s>player.distance and car.s-player.distance<maxf(45,absf(player.speed+12-car.speed)*3.4) and absf(car.lane-player.lane)<2.0: clear_road=false
 	var upcoming_curve = absf(race.route.curvature(player.distance))
 	for ahead in [15,30,50,70]: upcoming_curve=maxf(upcoming_curve,absf(race.route.curvature(player.distance+ahead)))
-	var safe_speed = minf(player.top_speed,sqrt(15/maxf(.001,upcoming_curve)))
+	var safe_speed = player.corner_speed(upcoming_curve,player.top_speed,player.handling)
 	var brake = clampf((player.speed-safe_speed)*.22,0,1)
 	var throttle = 1.0 if brake<.05 else 0.0
 	clear_road = clear_road and upcoming_curve<.003

@@ -1,4 +1,5 @@
 extends RefCounted
+const Bike = preload("res://game/bike_state.gd")
 const Combat = preload("res://game/systems/combat.gd")
 
 static func update(race: Node3D, dt: float) -> void:
@@ -39,7 +40,7 @@ static func update(race: Node3D, dt: float) -> void:
 		var curve: float = absf(race.route.curvature(r.s))
 		for ahead in [15,35,60]: curve=maxf(curve,absf(race.route.curvature(r.s+ahead)))
 		if curve>.003:
-			target_speed = minf(target_speed,sqrt((15.0+r.skill*.4)/curve))
+			target_speed = minf(target_speed,Bike.corner_speed(curve,base_speed,spec.handling)*(.97+r.skill*.03))
 		var desired = float(r.home_lane)
 		if absf(gap)<14 and aggression>.55 and race.player.crash_timer == 0:
 			desired = race.player.lane+(-1.55 if r.lane<race.player.lane else 1.55)
@@ -62,8 +63,7 @@ static func update(race: Node3D, dt: float) -> void:
 			r.lane = move_toward(r.lane,safest,dt*(2.8+r.skill*.7))
 		r.speed = move_toward(r.speed,target_speed,dt*(32 if target_speed<r.speed else spec.acceleration*.9+(6 if sprint else 0)))
 		r.s += r.speed*dt
-		var corner_load = absf(race.route.curvature(r.s))*r.speed*r.speed
-		r.stability = minf(100,r.stability+dt*(5 if corner_load<19 else -(corner_load-19)*1.6))
+		r.stability = minf(100,r.stability+dt*5)
 		if r.stability<=0:
 			race.knock_out(i,false)
 			continue

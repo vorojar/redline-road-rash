@@ -23,6 +23,8 @@ run_checked work/verify-boost-regression.log --headless --path "$ROOT" --script 
 cat work/verify-boost-regression.log
 run_checked work/verify-experience.log --headless --path "$ROOT" --script res://tests/experience_v05.gd
 cat work/verify-experience.log
+run_checked work/verify-arcade-cornering.log --headless --path "$ROOT" --script res://tests/arcade_cornering.gd
+cat work/verify-arcade-cornering.log
 run_checked work/verify-touch.log --headless --path "$ROOT" --script res://tests/touch_controls.gd
 cat work/verify-touch.log
 run_checked work/verify-pine.log --headless --path "$ROOT" --script res://tests/drive_soak.gd --fixed-fps 60
