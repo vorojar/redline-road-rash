@@ -45,6 +45,8 @@ run_checked work/verify-finish-presentation.log --headless --path "$ROOT" --scri
 cat work/verify-finish-presentation.log
 run_checked work/verify-endurance.log --headless --path "$ROOT" --script res://tests/endurance.gd
 cat work/verify-endurance.log
+run_checked work/verify-map-loading.log --headless --path "$ROOT" --script res://tests/map_loading.gd
+cat work/verify-map-loading.log
 run_checked work/verify-touch.log --headless --path "$ROOT" --script res://tests/touch_controls.gd
 cat work/verify-touch.log
 run_checked work/verify-pine.log --headless --path "$ROOT" --script res://tests/drive_soak.gd --fixed-fps 60

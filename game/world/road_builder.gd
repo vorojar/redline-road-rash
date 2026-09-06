@@ -10,8 +10,19 @@ var roadside: StandardMaterial3D
 var hazards: Array[Dictionary] = []
 var road_meshes: int = 0
 var paint_tool: SurfaceTool
+signal build_progress(value: float)
+var cooperative: bool = false
+var slice_started: int = 0
 
-func build(path: Path3D, data: Dictionary) -> void:
+func checkpoint(progress: float) -> void:
+	if cooperative and Time.get_ticks_usec()-slice_started >= 4000:
+		build_progress.emit(progress)
+		await get_tree().process_frame
+		slice_started = Time.get_ticks_usec()
+
+func build(path: Path3D, data: Dictionary, gradual: bool = false) -> void:
+	cooperative = gradual
+	slice_started = Time.get_ticks_usec()
 	route = path
 	track = data
 	asphalt = texture_material("res://assets/textures/asphalt/Asphalt010_1K-JPG_Color.jpg", "res://assets/textures/asphalt/Asphalt010_1K-JPG_NormalGL.jpg", Color(0.72,0.72,0.72))
@@ -45,12 +56,13 @@ func build(path: Path3D, data: Dictionary) -> void:
 		markings.material_override = paint
 		markings.visibility_range_end = 750
 		add_child(markings)
+		await checkpoint(.05+.5*float(section+2)/(int(length/100)+4))
 	if track.has("stages"):
-		build_corridor_landscape(length)
-		build_endurance_landmarks()
+		await build_corridor_landscape(length)
+		await build_endurance_landmarks()
 	else:
-		build_landscape(length)
-	build_props(length)
+		await build_landscape(length)
+	await build_props(length)
 	build_hazards(length)
 	build_finish(length)
 	if track.theme == "coast":
@@ -166,10 +178,11 @@ func build_landscape(length: float) -> void:
 			var point = Vector3(low.x+col*step,0,low.y+row*step)
 			point.y = land_height(point)
 			vertices.append(point)
-	for first in range(0,rows,20):
+		await checkpoint(.55+.1*float(row+1)/(rows+1))
+	for first in range(0,rows,4):
 		var st = SurfaceTool.new()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		for row in range(first,mini(first+20,rows)):
+		for row in range(first,mini(first+4,rows)):
 			for col in range(cols):
 				var a = row*(cols+1)+col
 				for index in [a,a+1,a+cols+1,a+1,a+cols+2,a+cols+1]:
@@ -182,6 +195,7 @@ func build_landscape(length: float) -> void:
 		mesh.material_override = ground
 		mesh.visibility_range_end = 1200
 		add_child(mesh)
+		await checkpoint(.65+.1*float(first+4)/rows)
 
 func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: float) -> void:
 	# Split batches spatially so distant scenery is actually culled.
@@ -223,6 +237,7 @@ func build_props(length: float) -> void:
 				var b = Basis.IDENTITY.scaled(Vector3(height*.65,height,1))
 				if not mobile_quality or (i%2==0 and k==0):
 					tree_transforms.append(Transform3D(b,pos))
+		await checkpoint(.78+.08*float(i+3)/(int(length/8)+14))
 	var post = BoxMesh.new()
 	post.size = Vector3(.10,1.08,.12)
 	multi(post,post_transforms,V.material(Color("72716b"),.6),450)
@@ -236,6 +251,7 @@ func build_props(length: float) -> void:
 		collider.shape = rail_shape
 		collider.transform = transform_value
 		rail_body.add_child(collider)
+		await checkpoint(.89)
 	var rail = BoxMesh.new()
 	rail.size = Vector3(.07,.26,8.15)
 	multi(rail,rail_transforms,V.material(Color("99988d"),.6),650)
@@ -255,6 +271,7 @@ func build_props(length: float) -> void:
 		var curve = route.curvature(float(s))
 		if absf(curve)>.009:
 			sign_board(float(s), "<<" if curve>0 else ">>", Color("bba243"), 7.3 if curve>0 else -7.3, 1.55)
+		await checkpoint(.96)
 	for s in range(500,int(length),500):
 		sign_board(float(s), "%s\n%d m" % ["COUNTY RUN" if track.id=="interstate" else "PINE COUNTY" if track.id == "pine" else "COAST HIGHWAY",int(length)-s], Color("244b3c"), 7.1, 2.4)
 
@@ -332,9 +349,11 @@ func build_corridor_landscape(length: float) -> void:
 			mesh.material_override=ground.duplicate()
 			mesh.material_override.cull_mode=BaseMaterial3D.CULL_DISABLED
 			add_child(mesh)
+		await checkpoint(.55+.2*float(start+200)/(length+300))
 
 func build_endurance_landmarks() -> void:
 	for stage in track.stages:
+		await checkpoint(.77)
 		sign_board(stage.start+30,stage.name,Color("244b3c"),7.2,3.6)
 		if stage.kind=="service":
 			for s in range(int(stage.start),int(stage.start)+450,50):
@@ -364,6 +383,7 @@ func build_endurance_landmarks() -> void:
 					bridge_beam(a+Vector3.UP*4.9,b+Vector3.UP*4.9,.18)
 					bridge_beam(a+Vector3.UP*.8,b+Vector3.UP*4.9,.14)
 				bridge_beam(route.point(s,-7.7)+Vector3.UP*5,route.point(s,7.7)+Vector3.UP*5,.20)
+				await checkpoint(.77)
 
 func bridge_beam(a: Vector3,b: Vector3,width: float) -> void:
 	var beam=V.box(self,Vector3(width,width,a.distance_to(b)),(a+b)*.5,Color("62787b"))

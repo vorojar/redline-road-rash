@@ -27,6 +27,11 @@ var player = BikeState.new()
 var track: Dictionary
 var route: Path3D
 var world: Node3D
+# At most one entry per catalog track. Detached worlds retain their own route.
+var world_cache: Dictionary = {}
+var loading_progress: float = 0.0
+var loading_title: String = ""
+
 var player_mesh: CharacterBody3D
 var camera: Camera3D
 var hud: Control
@@ -66,6 +71,11 @@ var particles: Array[Dictionary] = []
 var telemetry: Array = []
 var telemetry_clock: float = 0.0
 
+func _exit_tree() -> void:
+	for entry in world_cache.values():
+		if is_instance_valid(entry.world) and not entry.world.is_inside_tree():
+			entry.world.free()
+
 func _ready() -> void:
 	rng.seed = 812
 	if not test_mode:
@@ -89,6 +99,9 @@ func _ready() -> void:
 	add_child(world)
 	route.curve = load("res://data/tracks/pine.tres")
 	world.build(route,track)
+	remove_child(route)
+	world.add_child(route)
+	world_cache[track.id] = {"world":world,"route":route}
 	player_mesh = Actor.new()
 	add_child(player_mesh)
 	camera = Camera3D.new()
@@ -198,22 +211,52 @@ func reset_race() -> void:
 	mode = "ready"
 
 func select_track(index: int) -> bool:
+	if mode == "loading" or index < 0 or index >= career.catalog.tracks.size():
+		return false
 	var next: Dictionary = career.catalog.tracks[index]
 	if next.id not in career.unlocked:
 		notify("海岸断崖进入前三，解锁跨郡耐力赛。" if next.id=="interstate" else "松岭公路进入前三，解锁海岸断崖。",3)
 		return false
 	if next.id != track.id:
-		track = next
-		world.free()
-		world = RoadBuilder.new()
-		world.mobile_quality = touch_device
-		add_child(world)
-		route.curve = load("res://data/tracks/"+str(track.id)+".tres")
-		world.build(route,track)
-		reset_race()
+		clear_touch()
+		mode = "loading"
+		loading_title = next.name
+		loading_progress = 0.0
+		load_track(next)
 	return true
 
+func load_track(next: Dictionary) -> void:
+	var gradual: bool = not test_mode
+	if gradual:
+		await get_tree().process_frame
+		await get_tree().process_frame
+	var entry: Dictionary
+	if world_cache.has(next.id):
+		entry = world_cache[next.id]
+	else:
+		var next_world = RoadBuilder.new()
+		next_world.mobile_quality = touch_device
+		next_world.visible = false
+		add_child(next_world)
+		var next_route = Route.new()
+		next_world.add_child(next_route)
+		next_route.curve = load("res://data/tracks/"+str(next.id)+".tres")
+		next_world.build_progress.connect(func(value: float): loading_progress = value)
+		await next_world.build(next_route,next,gradual)
+		entry = {"world":next_world,"route":next_route}
+		world_cache[next.id] = entry
+	loading_progress = 1.0
+	if gradual: await get_tree().process_frame
+	remove_child(world)
+	world = entry.world
+	route = entry.route
+	track = next
+	if not world.is_inside_tree(): add_child(world)
+	world.visible = true
+	reset_race()
+
 func start(practice: bool = false) -> void:
+	if mode == "loading": return
 	reset_race()
 	tutorial = practice
 	mode = "countdown"
@@ -223,6 +266,7 @@ func start(practice: bool = false) -> void:
 			car.s += 1200
 
 func menu_action(action: String) -> void:
+	if mode == "loading": return
 	clear_touch()
 	sound.click()
 	match action:

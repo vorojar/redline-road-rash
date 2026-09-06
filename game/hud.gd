@@ -169,6 +169,9 @@ func _draw() -> void:
 	clicks.clear()
 	if race == null or race.player == null:
 		return
+	if race.mode == "loading":
+		draw_loading(Vector2(1440,900))
+		return
 	if race.mode in ["ready","garage","settings"]:
 		draw_menu()
 	else:
@@ -176,6 +179,15 @@ func _draw() -> void:
 	if race.message_time>0 and race.mode in ["ready","garage","settings"]:
 		panel(Rect2(480,821,880,45))
 		text(race.message,500,850,17,gold)
+
+func draw_loading(view: Vector2) -> void:
+	draw_rect(Rect2(Vector2.ZERO,view),Color("101713"))
+	var center = view*.5
+	text("REDLINE",center.x-180,center.y-74,38,cream,true)
+	text(race.loading_title,center.x-180,center.y-25,26,gold)
+	text("LOADING   %d%%" % int(race.loading_progress*100),center.x-180,center.y+24,18,faded)
+	draw_rect(Rect2(center+Vector2(-180,48),Vector2(360,5)),Color("303b34"))
+	draw_rect(Rect2(center+Vector2(-180,48),Vector2(360*race.loading_progress,5)),gold)
 
 func draw_menu() -> void:
 	draw_rect(Rect2(0,0,1440,100),Color(.03,.04,.04,.90))

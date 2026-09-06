@@ -39,6 +39,9 @@ func draw(h) -> void:
 		h.text("请横屏握持手机或平板",80,height*.43+75,36,h.gold)
 		h.text("转回横屏后，点继续比赛",80,height*.43+132,30,h.faded)
 		return
+	if race.mode == "loading":
+		h.draw_loading(Vector2(960,height))
+		return
 	if race.mode in ["ready","garage","settings"]:
 		draw_menu(h,height)
 	else:
