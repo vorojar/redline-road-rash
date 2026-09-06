@@ -147,6 +147,7 @@ func reset_race() -> void:
 	player.assist = career.settings.assist
 	player_mesh.clear_crash()
 	player_mesh.set_model(career.bike())
+	player_mesh.style_rider(Color("354f68"),Color("eee4cd"))
 	player_mesh.position = route.point(0,player.lane)
 	elapsed = 0
 	countdown = 3
@@ -169,8 +170,8 @@ func reset_race() -> void:
 		var bike_id = (["ratchet","ratchet","ratchet","revenant","revenant"] if track.id=="pine" else ["ratchet","revenant","revenant","phantom","phantom"])[i]
 		actor.set_model(career.bike(bike_id))
 		actor.tint([Color("454641"),Color("777069"),Color("8c7c3f"),Color("223a48"),Color("531e1a")][i])
-		actor.style_rider([Color("302e29"),Color("443129"),Color("252f37"),Color("3a4239"),Color("39282a")][i],[Color("8a8370"),Color("343b38"),Color("9c9380"),Color("414d55"),Color("722e26")][i])
-		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new()})
+		actor.style_rider([Color("b94132"),Color("e0b84b"),Color("3c83b7"),Color("60a16c"),Color("bc7850")][i],[Color("e2ddd0"),Color("c04435"),Color("e2ddd0"),Color("e4bf46"),Color("263747")][i])
+		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new(),"duel_time":0.0,"duel_cooldown":0.0})
 	for i in range(18):
 		var truck = i%6 == 5
 		var car = Traffic.vehicle([Color("afb0a5"),Color("65564a"),Color("375058"),Color("8f866a")][i%4],truck)
@@ -395,9 +396,9 @@ func update_lesson() -> void:
 	if lesson == 2 and player.hits>0: lesson = 3
 	if lesson == 3 and burst.activations>0: lesson = 4
 
-func nearest_target() -> int:
+func nearest_target(radius: float = 5.0) -> int:
 	var best = -1
-	var distance = 5.0
+	var distance = radius
 	for i in range(racers.size()):
 		var r = racers[i]
 		var d = Vector2(r.s-player.distance,r.lane-player.lane).length()
@@ -545,8 +546,8 @@ func update_visuals(dt: float) -> void:
 	police.mesh.rotation.y = route.yaw(police.s)
 	var pos = player_mesh.position
 	var direction = route.tangent(player.distance)
-	var desired = pos-direction*5.2+Vector3.UP*2.5
-	var look = route.point(player.distance+14,player.lane*.6)+Vector3.UP*1.2
+	var desired = pos-direction*4.3+Vector3.UP*1.95
+	var look = route.point(player.distance+16,player.lane*.75)+Vector3.UP*1.25
 	if mode in ["ready","garage","settings"]:
 		desired = pos+Vector3(3.6,1.9,3.8)
 		look = pos+Vector3(0,.9,0)
@@ -556,7 +557,7 @@ func update_visuals(dt: float) -> void:
 	camera.position.x += sin(elapsed*67)*shake*.11*career.settings.shake
 	camera.look_at(look)
 	if mode == "racing": camera.rotation.z += player.lean*.09
-	camera.fov = lerpf(camera.fov,58 if mode in ["ready","garage","settings"] else 62+player.speed*.21,minf(dt*5,1))
+	camera.fov = lerpf(camera.fov,58 if mode in ["ready","garage","settings"] else 60+player.speed*.14,minf(dt*5,1))
 	for i in range(particles.size()-1,-1,-1):
 		var p = particles[i]
 		p.life -= dt

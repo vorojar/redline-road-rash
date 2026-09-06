@@ -316,13 +316,14 @@ func draw_race() -> void:
 		panel(Rect2(1110,28,300,72))
 		text("POLICE / 警方追击" if race.police.active else "HEAT / 警觉度",1127,57,17,red if race.police.active else gold,true)
 		bar(1127,76,264,race.heat,red)
-	if race.target_index>=0 and race.mode == "racing":
-		var r = race.racers[race.target_index]
+	var opponent = race.nearest_target(18)
+	if opponent>=0 and race.mode == "racing":
+		var r = race.racers[opponent]
 		panel(Rect2(40,30,264,81))
-		text(r.name+("  /  即将攻击" if r.windup>0 else "  /  可以出手"),58,60,18,red if r.windup>0 else cream,true)
+		text(r.name+("  /  即将攻击" if r.windup>0 else "  /  %d m" % Vector2(r.s-p.distance,r.lane-p.lane).length()),58,60,18,red if r.windup>0 else cream,true)
 		bar(58,82,226,r.hp,red)
 		var world_pos = r.mesh.global_position+Vector3(0,2.15,0)
-		if not race.camera.is_position_behind(world_pos):
+		if opponent==race.target_index and not race.camera.is_position_behind(world_pos):
 			var screen = race.camera.unproject_position(world_pos)/get_viewport_rect().size*Vector2(1440,900)
 			draw_arc(screen,13,0,TAU,20,red if r.windup>0 else gold,2)
 	if race.message_time>0 and race.mode == "racing":

@@ -2,6 +2,18 @@ extends RefCounted
 const Bike = preload("res://game/bike_state.gd")
 const Combat = preload("res://game/systems/combat.gd")
 
+# A short contest after a natural catch-up; cooldown prevents endless speed matching.
+static func update_duel(r: Dictionary, dt: float, available: bool, gap: float, speed_gap: float) -> bool:
+	r.duel_cooldown = maxf(0,r.duel_cooldown-dt)
+	if r.duel_time>0:
+		r.duel_time = maxf(0,r.duel_time-dt)
+		if not available or absf(gap)>6 or absf(speed_gap)>8 or r.duel_time==0:
+			r.duel_time = 0.0
+			r.duel_cooldown = 5.0
+	elif available and absf(gap)<3.5 and absf(speed_gap)<6 and r.duel_cooldown==0:
+		r.duel_time = 5.5
+	return r.duel_time>0
+
 static func update(race: Node3D, dt: float) -> void:
 	for i in range(race.racers.size()):
 		var r = race.racers[i]
@@ -41,8 +53,9 @@ static func update(race: Node3D, dt: float) -> void:
 		for ahead in [15,35,60]: curve=maxf(curve,absf(race.route.curvature(r.s+ahead)))
 		if curve>.003:
 			target_speed = minf(target_speed,Bike.corner_speed(curve,base_speed,spec.handling)*(.97+r.skill*.03))
+		var dueling = update_duel(r,dt,i==race.nearest_target() and race.player.speed>18 and race.player.crash_timer<=0 and (r.stagger<=0 or r.duel_time>0) and r.burst.remaining<=0 and race.burst.remaining<=0 and absf(r.lane-race.player.lane)<3.2,gap,r.speed-race.player.speed)
 		var desired = float(r.home_lane)
-		if absf(gap)<14 and aggression>.55 and race.player.crash_timer == 0:
+		if (dueling or (absf(gap)<14 and aggression>.55)) and race.player.crash_timer == 0:
 			desired = race.player.lane+(-1.55 if r.lane<race.player.lane else 1.55)
 		var safest = desired
 		var open_road = true
@@ -55,7 +68,12 @@ static func update(race: Node3D, dt: float) -> void:
 				safest = left if absf(left-r.lane)<absf(right-r.lane) else right
 				if absf(safest-car.lane)<1.6:
 					target_speed = minf(target_speed,maxf(12,car.speed-2))
-		var eligible: bool = r.speed>8 and r.stagger<=0 and open_road and curve<.003
+		if dueling and open_road:
+			target_speed = minf(target_speed,maxf(18,race.player.speed+clampf(-gap*.9,-3,3)))
+		elif dueling:
+			r.duel_time = 0.0
+			r.duel_cooldown = 5.0
+		var eligible: bool = not dueling and r.speed>8 and r.stagger<=0 and open_road and curve<.003
 		var charge_held: bool = eligible and r.burst.cooldown<=0 and r.burst.remaining<=0 and r.burst.charge<r.burst.CHARGE_SECONDS-.0001
 		var sprint: bool = r.burst.update(dt,charge_held,eligible)
 		if sprint: target_speed += 12
