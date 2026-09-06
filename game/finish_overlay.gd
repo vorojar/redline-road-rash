@@ -3,23 +3,6 @@ extends RefCounted
 static func text(h, value: String, pos: Vector2, size: float, color: Color, strong: bool = false) -> void:
 	h.text(value,pos.x,pos.y,int(size),color,strong)
 
-static func trophy(h, center: Vector2, scale: float, color: Color) -> void:
-	# Layered cup, handles and pedestal keep the award legible at phone size.
-	h.draw_circle(center+Vector2(0,-25)*scale,120*scale,Color(color,.06))
-	for side in [-1,1]:
-		var points=PackedVector2Array()
-		for i in range(25):
-			var a=lerpf(-PI*.5,PI*.5,i/24.0)
-			points.append(center+Vector2(side*(67+43*cos(a)),-29+43*sin(a))*scale)
-		h.draw_polyline(points,color.darkened(.25),10*scale,true)
-	h.draw_colored_polygon(PackedVector2Array([center+Vector2(-74,-79)*scale,center+Vector2(74,-79)*scale,center+Vector2(58,-8)*scale,center+Vector2(26,33)*scale,center+Vector2(-26,33)*scale,center+Vector2(-58,-8)*scale]),color)
-	h.draw_colored_polygon(PackedVector2Array([center+Vector2(-63,-72)*scale,center+Vector2(-10,-72)*scale,center+Vector2(-10,23)*scale,center+Vector2(-25,23)*scale,center+Vector2(-47,-9)*scale]),color.lightened(.22))
-	h.draw_rect(Rect2(center+Vector2(-12,30)*scale,Vector2(24,54)*scale),color.darkened(.12))
-	h.draw_colored_polygon(PackedVector2Array([center+Vector2(-12,78)*scale,center+Vector2(12,78)*scale,center+Vector2(52,97)*scale,center+Vector2(-52,97)*scale]),color)
-	h.draw_rect(Rect2(center+Vector2(-61,97)*scale,Vector2(122,24)*scale),Color("4a3923"))
-	h.draw_rect(Rect2(center+Vector2(-57,97)*scale,Vector2(114,5)*scale),color.lightened(.16))
-	text(h,"1",center+Vector2(-14,0)*scale,46*scale,Color("fff1c8"),true)
-
 static func draw(h, width: float, height: float) -> void:
 	var race=h.race
 	var presentation=race.finish_presentation
@@ -40,8 +23,10 @@ static func draw(h, width: float, height: float) -> void:
 	text(h,"REDLINE / "+race.track.name,origin+Vector2(66,63)*u,18*u,Color(h.faded,reveal),true)
 	h.draw_line(origin+Vector2(66,82)*u,origin+Vector2(894,82)*u,Color(accent,.3*reveal),u)
 	if presentation.champion:
-		var cup_scale=u*lerpf(.72,1.0,smoothstep(.85,1.7,age))
-		trophy(h,origin+Vector2(230,242+24*(1-reveal))*u,cup_scale,Color(h.gold,reveal))
+		var cup_scale=lerpf(.88,1.0,smoothstep(.85,1.7,age))
+		var cup_size=Vector2(355,355)*u*cup_scale
+		var cup_center=origin+Vector2(230,248)*u
+		h.draw_texture_rect(h.trophy_view.get_texture(),Rect2(cup_center-cup_size*.5,cup_size),false,Color(1,1,1,reveal))
 		for i in range(26):
 			var t=fmod(age*.14+i*.173,1.0)
 			var x=70+fmod(i*127.0,800)+sin(age*1.8+i)*15

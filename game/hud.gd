@@ -16,6 +16,7 @@ var clicks: Array[Dictionary] = []
 var waiting_action: String = ""
 var garage_index: int = 0
 var hover: Vector2
+var trophy_view: SubViewport
 var garage_view: SubViewportContainer
 
 func _ready() -> void:
@@ -35,11 +36,14 @@ func _ready() -> void:
 	touch_bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):700}
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	trophy_view = preload("res://game/trophy_view.gd").new()
+	add_child(trophy_view)
 	garage_view = preload("res://game/garage_view.gd").new()
 	add_child(garage_view)
 	garage_view.visible = false
 
 func _process(_dt: float) -> void:
+	trophy_view.present(race.mode=="finished" and race.finish_presentation.champion and race.finish_presentation.age>=.85,race.finish_presentation.age)
 	if race.touch.enabled and not mobile_landscape() and race.mode in ["racing","countdown"]:
 		race.suspend_input()
 	garage_view.visible = race.mode == "garage" and (not race.touch.enabled or mobile_landscape())
