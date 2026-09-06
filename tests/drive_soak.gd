@@ -1,4 +1,5 @@
 extends SceneTree
+const Driver = preload("res://tests/drive_controller.gd")
 var race
 var frames=0
 var lane_target=2.0
@@ -45,7 +46,7 @@ func _physics_process(dt):
 			if hazard.s-player.distance>0 and hazard.s-player.distance<40:score-=maxf(0,1.4-absf(candidate-hazard.lane))*5
 		if score>best_score:best_score=score;safest=candidate
 	lane_target=safest
-	var steer=clampf((lane_target-player.lane)*1.8-player.lateral_velocity*.22,-1,1)
+	var steer=Driver.steer(player,lane_target)
 	var clear_road = absf(steer)<.6
 	for car in race.traffic:
 		if car.s>player.distance and car.s-player.distance<maxf(45,absf(player.speed+12-car.speed)*3.4) and absf(car.lane-player.lane)<2.0: clear_road=false
@@ -57,7 +58,7 @@ func _physics_process(dt):
 	clear_road = clear_road and upcoming_curve<.003
 	var held = clear_road and "--charge" in OS.get_cmdline_user_args() and race.burst.cooldown<=0 and race.burst.remaining<=0 and race.burst.charge<race.burst.CHARGE_SECONDS-.0001
 	race.simulate(dt,throttle,brake,steer,held)
-	race.player_mesh.ground_move(race.route.point(player.distance,player.lane),race.route.yaw(player.distance),dt)
+	race.player_mesh.ground_move(race.route.point(player.distance,player.lane),race.route.yaw(player.distance)+player.heading_offset,dt)
 	frames+=1
 	if frames%60==0:samples.append({"fps":Engine.get_frames_per_second(),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"triangles":Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)})
 	if frames%600==0:print("SOAK ",frames," distance=",player.distance," health=",player.health," FPS=",Engine.get_frames_per_second()," draw=",Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))

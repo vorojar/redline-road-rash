@@ -53,7 +53,7 @@ static func enemy_strike(race: Node3D, r: Dictionary) -> String:
 		p.guarding = false
 	var damage: float = [8,10,WEAPONS[r.weapon].damage*.48][r.kind]
 	if p.damage(damage*race.difficulty().damage,34 if r.kind==1 else 25):
-		p.lateral_velocity += signf(p.lane-r.lane)*(2 if r.kind==1 else 1.1)
+		p.apply_lateral_impulse(signf(p.lane-r.lane)*(2 if r.kind==1 else 1.1))
 		race.feedback(false,race.player_mesh.global_position,r.kind,r.weapon)
 		return "hit"
 	return "immune"

@@ -1,4 +1,5 @@
 extends SceneTree
+const Driver = preload("res://tests/drive_controller.gd")
 const Bike = preload("res://game/bike_state.gd")
 const Route = preload("res://game/world/route.gd")
 var checks = 0
@@ -18,11 +19,11 @@ func _initialize() -> void:
 				bike.curve_force = bend
 				var largest_offset = 0.0
 				for frame in range(hz*10):
-					var steer = clampf((2-bike.lane)*1.8-bike.lateral_velocity*.22,-1,1)
+					var steer = Driver.steer(bike,2)
 					bike.drive(1.0/hz,1,0,steer,boosted)
 					largest_offset = maxf(largest_offset,absf(bike.lane-2))
 				check(bike.crashes==0 and bike.stability==100,"%d Hz 弯道 %.3f 冲刺 %s 不无故失稳" % [hz,bend,boosted])
-				check(largest_offset<1.5 and bike.speed>40,"高速弯仍能修正路线并保持速度感")
+				check(largest_offset<1.5 and bike.speed>40,"%d Hz 弯 %.3f 冲刺 %s 可控（偏移 %.2f m，速度 %.1f）" % [hz,bend,boosted,largest_offset,bike.speed])
 	var shoulder = Bike.new()
 	shoulder.lane = 7
 	shoulder.speed = 53
@@ -45,7 +46,7 @@ func _initialize() -> void:
 		var length = 3000 if track=="pine" else 3600
 		for frame in range(12000):
 			bike.curve_force = route.curvature(bike.distance)
-			var steer = clampf((2-bike.lane)*1.8-bike.lateral_velocity*.22,-1,1)
+			var steer = Driver.steer(bike,2)
 			bike.drive(1.0/60,1,0,steer,false)
 			max_offset = maxf(max_offset,absf(bike.lane-2))
 			if bike.distance>=length: break

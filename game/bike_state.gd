@@ -10,6 +10,9 @@ var max_durability: float = 100.0
 var stability: float = 100.0
 var lean: float = 0.0
 var lateral_velocity: float = 0.0
+var heading_offset: float = 0.0
+var steering_rate: float = 0.0
+var lateral_impulse: float = 0.0
 var crash_timer: float = 0.0
 var invulnerable: float = 0.0
 var cooldown: float = 0.0
@@ -78,6 +81,9 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 			lane = clampf(lane,-5.8,5.8)
 			invulnerable = 2.5
 			lateral_velocity = 0
+			heading_offset = 0
+			steering_rate = 0
+			lateral_impulse = 0
 		return
 	var cap = corner_speed(curve_force,top_speed+12 if boost else top_speed,handling)
 	var target_accel = throttle*(acceleration+(6 if boost else 0)) - brake*32 - 1.8 - ground_slope*8
@@ -86,25 +92,35 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	else:
 		speed = maxf(0,speed+minf(target_accel,0)*dt)
 		speed = move_toward(speed,cap,dt*12)
-	var response = handling*lerpf(1.12,.80,clampf(speed/65,0,1))
-	var desired_lateral = steer*response*clampf(speed/8,0,1)
-	lateral_velocity = move_toward(lateral_velocity,desired_lateral,dt*15)
-	# Outward drift adds steering work, but never exceeds half the available steering.
-	var drift = clampf(curve_force*speed*speed*.022,-response*.45,response*.45)
-	lane += (lateral_velocity+drift)*dt
-	if assist and absf(steer) < .1:
-		lane = move_toward(lane,clampf(lane,-5.7,5.7),dt*1.5)
-	lean = lerpf(lean,clampf(atan(curve_force*speed*speed/9.8)*.65-lateral_velocity/handling*.25,-.78,.78),minf(dt*8,1))
+	# Steering changes heading in world space. Road yaw only changes its relative angle.
+	var desired_rate = -steer*turn_rate()
+	steering_rate = move_toward(steering_rate,desired_rate,dt*24)
+	var forward_speed = speed*maxf(0,cos(heading_offset))/maxf(.35,1+curve_force*lane)
+	var advance = forward_speed*dt
+	var heading_change = steering_rate*dt-curve_force*advance
+	var midpoint_heading = heading_offset+heading_change*.5
+	lateral_velocity = -sin(midpoint_heading)*speed+lateral_impulse
+	lane += lateral_velocity*dt
+	heading_offset = wrapf(heading_offset+heading_change,-PI,PI)
+	lateral_impulse = move_toward(lateral_impulse,0,dt*15)
+	# Optional assistance softens rough shoulders; it never changes steering or heading.
+	lean = lerpf(lean,clampf(atan(steering_rate*speed/9.8)*.65,-.78,.78),minf(dt*8,1))
 	if absf(lane)>6.5:
-		speed = move_toward(speed,25,dt*12)
+		speed = move_toward(speed,25,dt*(8 if assist else 12))
 	stability = minf(100,stability+dt*7)
 	if absf(lane)>8.1:
 		lane = clampf(lane,-8.1,8.1)
 		damage(5,26)
-		lateral_velocity *= -.35
-	distance += speed*dt
+		lateral_impulse = -lateral_velocity*.35
+		heading_offset *= -.35
+		steering_rate = 0
+	distance += advance
 	if stability <= 0:
 		crash()
+
+func apply_lateral_impulse(amount: float) -> void:
+	lateral_impulse += amount
+	lateral_velocity += amount
 
 func damage(amount: float, instability: float) -> bool:
 	if invulnerable>0 or crash_timer>0:
@@ -136,6 +152,9 @@ func credit_ko(environment: bool) -> void:
 	combo += 1
 	best_combo = maxi(best_combo,combo)
 	combo_timer = 10
+
+func turn_rate() -> float:
+	return handling*.5*clampf(speed/12,0,1)
 
 # Arcade cornering trades a little speed for grip; impacts own the fall penalty.
 static func corner_speed(curvature: float, maximum: float, agility: float) -> float:

@@ -83,7 +83,7 @@ func draw_menu(h, height: float) -> void:
 		var settings: Dictionary = race.career.settings
 		h.panel(Rect2(16,92,928,height-108),Color("101713"))
 		h.button(Rect2(28,104,430,64),"难度："+race.difficulty().name,func(): settings.difficulty=(int(settings.difficulty)+1)%3; h.save_settings())
-		h.button(Rect2(28,180,430,64),"道路辅助："+("开" if settings.assist else "关"),func(): settings.assist=not settings.assist; race.player.assist=settings.assist; h.save_settings())
+		h.button(Rect2(28,180,430,64),"路肩容错："+("开" if settings.assist else "关"),func(): settings.assist=not settings.assist; race.player.assist=settings.assist; h.save_settings())
 		h.button(Rect2(28,256,430,64),"音量：%d%%" % (settings.volume*100),func(): settings.volume=0.0 if settings.volume>=.99 else minf(1,settings.volume+.25); h.save_settings())
 		h.button(Rect2(28,332,430,64),"音乐：%d%%" % (settings.music*100),func(): settings.music=0.0 if settings.music>=.99 else minf(1,settings.music+.25); h.save_settings())
 		h.button(Rect2(490,104,434,64),"操作："+h.control_mode_label(),func(): h.cycle_control_mode())

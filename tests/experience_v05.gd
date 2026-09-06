@@ -1,4 +1,5 @@
 extends SceneTree
+const Driver = preload("res://tests/drive_controller.gd")
 const Race = preload("res://game/race.gd")
 const Bike = preload("res://game/bike_state.gd")
 var checks = 0
@@ -53,12 +54,12 @@ func run() -> void:
 	fast.speed=53
 	fast.curve_force=.017
 	for i in range(180):
-		fast.drive(1.0/60,1,0,clampf((2-fast.lane)*1.8-fast.lateral_velocity*.22,-1,1),false)
+		fast.drive(1.0/60,1,0,Driver.steer(fast,2),false)
 	check(fast.crashes==0 and fast.speed<53 and fast.speed>40,"紧弯全油门轻微减速且可保持路线")
 	var controlled = Bike.new()
 	controlled.speed=28
 	controlled.curve_force=.017
-	for i in range(120):controlled.drive(1.0/60,.14,0,-.16,false)
+	for i in range(120):controlled.drive(1.0/60,.14,0,Driver.steer(controlled,2),false)
 	check(controlled.crashes==0 and controlled.stability>95,"合理入弯速度保持抓地")
 	check(controlled.lean>.2,"持续弯道显示倾车而非直立")
 	var shifts = 0

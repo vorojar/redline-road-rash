@@ -23,6 +23,8 @@ run_checked work/verify-boost-regression.log --headless --path "$ROOT" --script 
 cat work/verify-boost-regression.log
 run_checked work/verify-experience.log --headless --path "$ROOT" --script res://tests/experience_v05.gd
 cat work/verify-experience.log
+run_checked work/verify-manual-steering.log --headless --path "$ROOT" --script res://tests/manual_steering.gd
+cat work/verify-manual-steering.log
 run_checked work/verify-arcade-cornering.log --headless --path "$ROOT" --script res://tests/arcade_cornering.gd
 cat work/verify-arcade-cornering.log
 run_checked work/verify-duel.log --headless --path "$ROOT" --script res://tests/duel_pacing.gd

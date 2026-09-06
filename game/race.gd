@@ -330,7 +330,7 @@ func _physics_process(dt: float) -> void:
 	var driving = touch.driving(cruise)
 	if driving.brake>.1: cruise = false
 	simulate(dt,driving.throttle,driving.brake,driving.steer,driving.boost)
-	player_mesh.ground_move(route.point(player.distance,player.lane),route.yaw(player.distance),dt)
+	player_mesh.ground_move(route.point(player.distance,player.lane),route.yaw(player.distance)+player.heading_offset,dt)
 
 func _process(dt: float) -> void:
 	if mode != "paused":
@@ -339,7 +339,7 @@ func _process(dt: float) -> void:
 	shake = maxf(0,shake-dt*2)
 	flash = maxf(0,flash-dt*3)
 	var pursuit = clampf(1-absf(player.distance-police.s)/100,0,1) if police.active else 0.0
-	sound.update(player.speed,throttle_value,pursuit,mode == "racing",career.settings.volume,absf(player.lane)>6.5,dt,career.settings.music,absf(player.curve_force)*player.speed*player.speed)
+	sound.update(player.speed,throttle_value,pursuit,mode == "racing",career.settings.volume,absf(player.lane)>6.5,dt,career.settings.music,absf(player.steering_rate)*player.speed)
 	hud.queue_redraw()
 	if mode == "racing":
 		frame_samples.append(dt)
@@ -526,10 +526,10 @@ func update_visuals(dt: float) -> void:
 	camera.cull_mask = 0 if mode=="garage" else 1048575
 	if mode in ["ready","garage","settings","finished","countdown"]:
 		player_mesh.position = route.point(player.distance,player.lane)
-		player_mesh.rotation.y = route.yaw(player.distance)
+		player_mesh.rotation.y = route.yaw(player.distance)+player.heading_offset
 	player_mesh.ride_speed = player.speed
 	player_mesh.set_combat(player.weapon,player.guarding,player.dodge_time,0)
-	player_mesh.crash_velocity = route.tangent(player.distance)*player.crash_speed*.35+player_mesh.global_basis.x*player.crash_lateral
+	player_mesh.crash_velocity = route.tangent(player.distance)*player.crash_speed*maxf(0,cos(player.heading_offset))*.35+Basis(Vector3.UP,route.yaw(player.distance)).x*player.crash_lateral
 	player_mesh.pose(elapsed,player.lean,route.slope(player.distance),player.crash_timer,player.attack_time,player.attack_side,player.attack_kind,flash,player.distance)
 	for r in racers:
 		r.mesh.position = route.point(r.s,r.lane)
@@ -545,9 +545,9 @@ func update_visuals(dt: float) -> void:
 	police.mesh.position = route.point(police.s,police.lane)
 	police.mesh.rotation.y = route.yaw(police.s)
 	var pos = player_mesh.position
-	var direction = route.tangent(player.distance)
+	var direction = route.tangent(player.distance).rotated(Vector3.UP,player.heading_offset)
 	var desired = pos-direction*4.3+Vector3.UP*1.95
-	var look = route.point(player.distance+16,player.lane*.75)+Vector3.UP*1.25
+	var look = pos+direction*16+Vector3.UP*1.25
 	if mode in ["ready","garage","settings"]:
 		desired = pos+Vector3(3.6,1.9,3.8)
 		look = pos+Vector3(0,.9,0)

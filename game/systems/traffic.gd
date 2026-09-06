@@ -34,10 +34,10 @@ static func update(race: Node3D, dt: float) -> void:
 			var severity = race.player.collision_severity(absf(race.player.speed-car.speed),overlap)
 			var side = signf(race.player.lane-car.lane)
 			if side == 0: side = 1
-			race.player.lateral_velocity += side*(1+severity*3)
+			race.player.apply_lateral_impulse(side*(1+severity*3))
 			race.player.damage(6+severity*20,18+severity*110)
 			race.player.speed *= 1-severity*.65
-			race.player.lateral_velocity += signf(race.player.lane-car.lane)*2
+			race.player.apply_lateral_impulse(signf(race.player.lane-car.lane)*2)
 			race.feedback(severity>.65,race.player_mesh.global_position)
 			race.notify(("迎头碰撞！" if car.speed<0 else "追尾撞击！") if overlap>.55 else "侧面擦碰 · 稳住车身")
 	for hazard in race.world.hazards:
@@ -75,7 +75,7 @@ static func update_police(race: Node3D,dt: float) -> void:
 				race.finish("BUSTED","警方截获，比赛结束")
 		elif absf(race.player.lane-race.police.lane)<1.4 and race.player.invulnerable<=0:
 			race.player.damage(4,18)
-			race.player.lateral_velocity += 1.5 if race.player.lane>=0 else -1.5
+			race.player.apply_lateral_impulse(1.5 if race.player.lane>=0 else -1.5)
 	else:
 		race.police.arrest = 0.0
 	# A predictable one-lane roadblock; a clear passage always remains.

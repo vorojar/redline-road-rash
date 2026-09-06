@@ -255,7 +255,7 @@ func draw_settings() -> void:
 	button(Rect2(75,249,400,50),"难度："+race.difficulty().name,func(): settings.difficulty=(int(settings.difficulty)+1)%3; save_settings())
 	button(Rect2(75,312,400,50),"音量：%d%%" % (settings.volume*100),func(): settings.volume=0.0 if settings.volume>=.99 else minf(1,settings.volume+.25); save_settings())
 	button(Rect2(75,375,400,50),"镜头震动：%d%%" % (settings.shake*100),func(): settings.shake=0.0 if settings.shake>.9 else settings.shake+.5; save_settings())
-	button(Rect2(75,438,400,50),"道路辅助："+("开" if settings.assist else "关"),func(): settings.assist=not settings.assist; race.player.assist=settings.assist; save_settings())
+	button(Rect2(75,438,400,50),"路肩容错："+("开" if settings.assist else "关"),func(): settings.assist=not settings.assist; race.player.assist=settings.assist; save_settings())
 	button(Rect2(75,501,400,50),"大号速度读数："+("开" if settings.large_hud else "关"),func(): settings.large_hud=not settings.large_hud; save_settings())
 	button(Rect2(75,564,400,42),"音乐：%d%%" % (settings.music*100),func(): settings.music=0.0 if settings.music>=.99 else minf(1,settings.music+.25); save_settings())
 	text("手柄：RT 油门 / LT 刹车 / 左摇杆 转向",75,634,17,cream)
