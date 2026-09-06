@@ -57,6 +57,14 @@ func _physics_process(dt):
 	var throttle = 1.0 if brake<.05 else 0.0
 	clear_road = clear_road and upcoming_curve<.003
 	var held = clear_road and "--charge" in OS.get_cmdline_user_args() and race.burst.cooldown<=0 and race.burst.remaining<=0 and race.burst.charge<race.burst.CHARGE_SECONDS-.0001
+	# Combat-focused opponents now keep up: exercise real defense rather than tanking hits.
+	var guard = false
+	for r in race.racers:
+		if r.combat_target==-1 and r.windup>0 and r.windup<.18 and absf(r.s-player.distance)<3 and absf(r.lane-player.lane)<2.5:
+			if r.kind==1: player.dodge()
+			else: guard = true
+	if guard: Input.action_press("guard")
+	else: Input.action_release("guard")
 	race.simulate(dt,throttle,brake,steer,held)
 	race.player_mesh.ground_move(race.route.point(player.distance,player.lane),race.route.yaw(player.distance)+player.heading_offset,dt)
 	frames+=1
@@ -68,6 +76,7 @@ func _physics_process(dt):
 	return false
 
 func shutdown(code: int):
+	Input.action_release("guard")
 	race.sound.stop_all()
 	race.queue_free()
 	race=null

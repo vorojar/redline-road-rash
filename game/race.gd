@@ -171,7 +171,7 @@ func reset_race() -> void:
 		actor.set_model(career.bike(bike_id))
 		actor.tint([Color("454641"),Color("777069"),Color("8c7c3f"),Color("223a48"),Color("531e1a")][i])
 		actor.style_rider([Color("b94132"),Color("e0b84b"),Color("3c83b7"),Color("60a16c"),Color("bc7850")][i],[Color("e2ddd0"),Color("c04435"),Color("e2ddd0"),Color("e4bf46"),Color("263747")][i])
-		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new(),"duel_time":0.0,"duel_cooldown":0.0})
+		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new(),"duel_time":0.0,"duel_cooldown":0.0,"combat_target":-2,"attack_side":1.0})
 	for i in range(18):
 		var truck = i%6 == 5
 		var car = Traffic.vehicle([Color("afb0a5"),Color("65564a"),Color("375058"),Color("8f866a")][i%4],truck)
@@ -537,7 +537,7 @@ func update_visuals(dt: float) -> void:
 		r.mesh.ride_speed = r.speed
 		r.mesh.set_combat(r.weapon,r.guard>0,r.dodge,r.windup)
 		r.mesh.crash_velocity = route.tangent(r.s)*r.crash_speed*.35+ r.mesh.global_basis.x*signf(r.lane-player.lane)*2
-		r.mesh.pose(elapsed,clampf(atan(route.curvature(r.s)*r.speed*r.speed/9.8)*.65,-.65,.65),route.slope(r.s),r.crash,r.attack_time,signf(player.lane-r.lane),r.kind,r.stagger,r.s)
+		r.mesh.pose(elapsed,clampf(atan(route.curvature(r.s)*r.speed*r.speed/9.8)*.65,-.65,.65),route.slope(r.s),r.crash,r.attack_time,r.attack_side,r.kind,r.stagger,r.s)
 	for car in traffic:
 		car.mesh.position = route.point(car.s,car.lane)
 		car.mesh.rotation = Vector3(route.slope(car.s),route.yaw(car.s)+(PI if car.speed<0 else 0),0)

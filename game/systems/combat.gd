@@ -57,3 +57,29 @@ static func enemy_strike(race: Node3D, r: Dictionary) -> String:
 		race.feedback(false,race.player_mesh.global_position,r.kind,r.weapon)
 		return "hit"
 	return "immune"
+
+static func racer_strike(race: Node3D, attacker: Dictionary, target: int) -> String:
+	var r = race.racers[target]
+	if r.crash>0 or r.finished or absf(r.s-attacker.s)>2.6 or absf(r.lane-attacker.lane)>2.25:
+		return "miss"
+	if r.dodge>0:
+		return "dodge"
+	if r.guard>0 and r.stamina>=20 and attacker.kind!=1:
+		r.stamina = maxf(0,r.stamina-20)
+		r.hp -= 2
+		r.last_hit_age = 999.0
+		if r.hp<=0: race.knock_out(target,false)
+		return "block"
+	r.hp -= [8.0,10.0,WEAPONS[attacker.weapon].damage*.48][attacker.kind]
+	r.stability -= 34 if attacker.kind==1 else 25
+	r.lane += attacker.attack_side*(.65 if attacker.kind==1 else .3)
+	r.stagger = .6
+	r.windup = 0
+	r.cooldown = 1.1
+	# The most recent shove came from another racer, so its crash is not a player KO.
+	r.last_hit_age = 999.0
+	if absf(r.s-race.player.distance)<35:
+		race.feedback(false,r.mesh.global_position+Vector3.UP,attacker.kind,attacker.weapon)
+	if r.hp<=0 or r.stability<=0 or absf(r.lane)>7.8:
+		race.knock_out(target,false)
+	return "hit"
