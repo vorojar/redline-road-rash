@@ -29,7 +29,8 @@ func _initialize():
 			var correction=fresh()
 			for input in [side,0,-side,0]:
 				for i in range(hz/10): correction.drive(1.0/hz,1,0,input,false)
-			check(absf(correction.heading_offset)<.02 and absf(correction.lane)<1.5,"短按后反向微调可回正，不来回大幅甩动")
+			for i in range(hz*3/10): correction.drive(1.0/hz,1,0,0,false)
+			check(absf(correction.heading_offset)<.005 and absf(correction.lane)<1.5,"连续左右微调后松手可自动回正，不大幅甩动")
 		var slow=fresh()
 		var fast=fresh()
 		slow.speed=25

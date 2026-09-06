@@ -17,15 +17,15 @@ func run():
 		bike.speed=53
 		bike.curve_force=.017*direction
 		for i in range(15): bike.drive(1.0/60,1,0,0,false)
-		check(bike.lane*direction>1,"松开方向保持惯性直行，弯道移向外侧")
-		check(absf(bike.lean)<.05,"没有转向输入不会自动压弯")
+		check(absf(bike.lane)<.001 and absf(bike.heading_offset)<.001,"松开方向自动沿弯道保持车道")
+		check(bike.lean*direction>.1,"没有转向输入也会随道路压弯")
 	var straight=Bike.new()
 	straight.speed=40
 	for i in range(12): straight.drive(1.0/60,1,0,.25,false)
 	for i in range(30): straight.drive(1.0/60,1,0,0,false)
 	var lane_before=straight.lane
 	for i in range(6): straight.drive(1.0/60,1,0,0,false)
-	check(straight.lane-lane_before>.05,"松手后保留改变的行驶方向，不吸回道路朝向")
+	check(absf(straight.heading_offset)<.005 and absf(straight.lane-lane_before)<.03,"变道后松手自动回正并停止横移")
 	for track in ["pine","coast"]:
 		var route=Route.new()
 		route.curve=load("res://data/tracks/"+track+".tres")
@@ -42,15 +42,12 @@ func run():
 				free.lane=0
 				free.speed=45
 				free.assist=assisted
-				var origin=route.point(start)
 				var initial_heading=route.yaw(start)
-				for frame in range(15):
+				for frame in range(120):
 					free.curve_force=route.curvature(free.distance)
 					free.drive(1.0/60,1,0,0,false)
-				var heading_error=absf(wrapf(route.yaw(free.distance)+free.heading_offset-initial_heading,-PI,PI))
-				var displacement=route.point(free.distance,free.lane)-origin
-				var initial_right=Basis(Vector3.UP,initial_heading).x
-				check(heading_error<.03 and absf(displacement.dot(initial_right))<.2,track+" 松手轨迹和车头保持世界方向，辅助 %s" % assisted)
+				var heading_change=absf(wrapf(route.yaw(free.distance)-initial_heading,-PI,PI))
+				check(heading_change>.05 and absf(free.heading_offset)<.001 and absf(free.lane)<.001,track+" 车头自动跟随真实弯道且车道不漂移，辅助 %s" % assisted)
 		route.free()
 	var pushed=Bike.new()
 	pushed.speed=40
@@ -86,13 +83,12 @@ func run():
 		check(absf(wrapf(race.player_mesh.rotation.y-race.route.yaw(race.player.distance)-race.player.heading_offset,-PI,PI))<.001,control+" 车体实际朝向与驾驶方向一致")
 		Input.action_release("left")
 		race.touch.clear()
+		for frame in range(60): race._physics_process(1.0/60)
 		for frame in range(8): race._physics_process(1.0/60)
-		var facing=race.route.yaw(race.player.distance)+race.player.heading_offset
-		for frame in range(8): race._physics_process(1.0/60)
-		check(absf(wrapf(race.route.yaw(race.player.distance)+race.player.heading_offset-facing,-PI,PI))<.01,control+" 松手后不再持续打方向也不自动对齐道路")
+		check(absf(race.player.heading_offset)<.001,control+" 松手后自动对齐道路朝向")
 		Input.action_release("throttle")
 	race.sound.stop_all()
 	race.queue_free()
 	await process_frame
-	print("MANUAL_STEERING_RESULT: %d checks, %d failures" % [checks,failures])
+	print("ROAD_FOLLOW_RESULT: %d checks, %d failures" % [checks,failures])
 	quit(1 if failures else 0)

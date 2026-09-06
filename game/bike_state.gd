@@ -2,6 +2,7 @@ extends RefCounted
 
 const CRASH_DURATION: float = 6.2
 const STEERING_EXPONENT: float = 1.8
+const HEADING_RETURN: float = 8.0
 var distance: float = 0.0
 var lane: float = 2.0
 var speed: float = 0.0
@@ -93,7 +94,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	else:
 		speed = maxf(0,speed+minf(target_accel,0)*dt)
 		speed = move_toward(speed,cap,dt*12)
-	# Steering changes heading in world space. Road yaw only changes its relative angle.
+	# Road following supplies the bend; steering creates a temporary lane-change angle.
 	var shaped_steer = signf(steer)*pow(absf(steer),STEERING_EXPONENT)
 	var desired_rate = -shaped_steer*turn_rate()
 	# Build steering gently, but remove it promptly when releasing or countersteering.
@@ -103,14 +104,16 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 		steering_rate = move_toward(steering_rate,desired_rate,dt*(30 if absf(desired_rate)<absf(steering_rate) else 10))
 	var forward_speed = speed*maxf(0,cos(heading_offset))/maxf(.35,1+curve_force*lane)
 	var advance = forward_speed*dt
-	var heading_change = steering_rate*dt-curve_force*advance
+	var relative_turn_rate = steering_rate-heading_offset*HEADING_RETURN
+	var heading_change = relative_turn_rate*dt
 	var midpoint_heading = heading_offset+heading_change*.5
 	lateral_velocity = -sin(midpoint_heading)*speed+lateral_impulse
 	lane += lateral_velocity*dt
 	heading_offset = wrapf(heading_offset+heading_change,-PI,PI)
 	lateral_impulse = move_toward(lateral_impulse,0,dt*15)
-	# Optional assistance softens rough shoulders; it never changes steering or heading.
-	lean = lerpf(lean,clampf(atan(steering_rate*speed/9.8)*.65,-.78,.78),minf(dt*8,1))
+	# Lean includes the road turn as well as the player's lane change.
+	var world_turn_rate = curve_force*forward_speed+relative_turn_rate
+	lean = lerpf(lean,clampf(atan(world_turn_rate*speed/9.8)*.65,-.78,.78),minf(dt*8,1))
 	if absf(lane)>6.5:
 		speed = move_toward(speed,25,dt*(8 if assist else 12))
 	stability = minf(100,stability+dt*7)
