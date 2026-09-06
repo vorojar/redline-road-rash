@@ -8,13 +8,13 @@ var cancel_boost: bool = false
 
 func layout(height: float, left_handed: bool = false) -> Dictionary:
 	var rects = {
-		"steer": Rect2(24,height-148,248,120),
+		"steer": Rect2(60,height-180,160,160),
 		"attack": Rect2(824,height-140,112,112),
-		"brake": Rect2(712,height-108,96,80),
-		"boost": Rect2(816,height-228,120,72),
-		"guard": Rect2(704,height-196,96,72),
-		"grab": Rect2(592,height-108,104,80),
-		"pause": Rect2(852,16,84,64)
+		"brake": Rect2(708,height-116,88,88),
+		"boost": Rect2(836,height-246,88,88),
+		"guard": Rect2(716,height-226,88,88),
+		"grab": Rect2(596,height-112,80,80),
+		"pause": Rect2(862,16,64,64)
 	}
 	if left_handed:
 		for action in rects:
@@ -29,11 +29,14 @@ func held(action: String) -> bool:
 		if finger.action == action: return true
 	return false
 
+static func contains(rect: Rect2, point: Vector2) -> bool:
+	return point.distance_squared_to(rect.get_center())<=pow(rect.size.x*.5,2)
+
 func press(index: int, point: Vector2, rects: Dictionary, can_grab: bool) -> String:
 	if fingers.has(index): return ""
 	for action in rects:
 		if action == "grab" and not can_grab: continue
-		if rects[action].has_point(point):
+		if contains(rects[action],point):
 			if action == "steer" and held("steer"): return ""
 			fingers[index] = {"action":action,"origin":point}
 			return action

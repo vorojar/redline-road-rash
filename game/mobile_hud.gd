@@ -1,5 +1,35 @@
 extends RefCounted
 
+const ICONS = {
+	"steer": preload("res://assets/ui/steer.svg"),
+	"attack": preload("res://assets/ui/attack.svg"),
+	"brake": preload("res://assets/ui/brake.svg"),
+	"guard": preload("res://assets/ui/guard.svg"),
+	"boost": preload("res://assets/ui/boost.svg"),
+	"grab": preload("res://assets/ui/grab.svg"),
+	"pause": preload("res://assets/ui/pause.svg")
+}
+
+func draw_control(h, action: String, rect: Rect2) -> void:
+	var active: bool = h.race.touch.held(action)
+	var center = rect.get_center()
+	var radius = rect.size.x*.5
+	var color = h.gold if action=="boost" else h.cream
+	h.draw_circle(center,radius,Color(.025,.04,.032,.78),true,-1,true)
+	if active:
+		h.draw_circle(center,radius-2,Color(.48,.16,.12,.88),true,-1,true)
+	h.draw_arc(center,radius-1,0,TAU,64,Color(color,.9 if active else .48),2,true)
+	if action == "steer":
+		h.draw_arc(center,radius-12,0,TAU,64,Color(h.cream,.13),1.5,true)
+		var knob = center+Vector2(h.race.touch.steer*50,0)
+		h.draw_circle(knob,29,Color(h.cream,.22 if active else .12),true,-1,true)
+		h.draw_texture_rect(ICONS.steer,Rect2(knob-Vector2(20,20),Vector2(40,40)),false,h.cream)
+	else:
+		var size = radius*(1.02 if action=="attack" else .98)
+		h.draw_texture_rect(ICONS[action],Rect2(center-Vector2.ONE*size*.5,Vector2.ONE*size),false,color)
+		if action == "boost":
+			h.draw_arc(center,radius-6,-PI*.5,-PI*.5+TAU*clampf(h.race.nitro/100,.001,1),64,h.gold,3.5,true)
+
 func draw(h) -> void:
 	var race = h.race
 	var height: float = h.mobile_height()
@@ -81,22 +111,8 @@ func draw_race(h, height: float) -> void:
 		for action in rects:
 			var rect: Rect2 = rects[action]
 			if action=="grab" and not race.can_touch_grab(): continue
-			var active: bool = race.touch.held(action)
-			h.panel(rect,Color(.45,.15,.11,.90) if active else Color(.045,.065,.05,.76))
-			if action == "steer":
-				var center: Vector2 = rect.get_center()
-				h.draw_line(center-Vector2(92,0),center+Vector2(92,0),h.faded,3)
-				h.draw_circle(center+Vector2(race.touch.steer*85,0),23,h.gold if active else h.cream)
-				h.text("滑动转向",rect.position.x+65,rect.position.y+104,24,h.cream)
-			else:
-				var labels = {"attack":"攻击","brake":"刹车","boost":"蓄力","guard":"格挡","grab":"夺械","pause":"暂停"}
-				h.text(labels[action],rect.position.x+(rect.size.x-52)*.5,rect.get_center().y+9,26,h.gold if action=="boost" else h.cream,true)
-				if action == "boost":
-					h.bar(rect.position.x+12,rect.end.y-12,rect.size.x-24,race.nitro,h.gold)
-		var center_label: String = "自动油门" if not race.touch.held("brake") else "正在刹车"
-		h.text(center_label,405,height-35,24,h.gold)
-		if race.burst.charging or race.burst.remaining>0 or race.burst.cooldown>0:
-			h.text(race.burst.label(),350,height-76,24,h.gold)
+			draw_control(h,action,rect)
+
 		var preview: float = race.route.curvature(p.distance+maxf(25,p.speed*1.4))
 		if absf(preview)>.006:
 			var advised = int(sqrt(16/absf(preview))*3.6/10)*10

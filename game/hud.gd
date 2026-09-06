@@ -18,8 +18,9 @@ var hover: Vector2
 var garage_view: SubViewportContainer
 
 func _ready() -> void:
+	var ui_font_path = "res://assets/fonts/RedlineUI.ttf" if OS.has_feature("web") else "res://assets/fonts/NotoSansSC.ttf"
 	if OS.get_name()=="Windows" or OS.has_feature("web"):
-		font = load("res://assets/fonts/NotoSansSC.ttf")
+		font = load(ui_font_path)
 		bold = FontVariation.new()
 		bold.base_font = font
 		bold.variation_embolden = .7
@@ -27,7 +28,7 @@ func _ready() -> void:
 		font.font_names = PackedStringArray(["Helvetica Neue","PingFang SC"])
 		bold.font_names = font.font_names
 		bold.font_weight = 800
-	touch_font.base_font = load("res://assets/fonts/NotoSansSC.ttf")
+	touch_font.base_font = load(ui_font_path)
 	touch_font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):500}
 	touch_bold.base_font = touch_font.base_font
 	touch_bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):700}

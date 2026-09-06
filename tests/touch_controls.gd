@@ -14,6 +14,8 @@ func run() -> void:
 	var touch = load("res://game/touch_controls.gd").new()
 	var rects = touch.layout(540)
 	touch.enabled = true
+	check(not touch.contains(rects.attack,rects.attack.position+Vector2(1,1)),"圆形按钮外的方框角落不误触")
+	check(touch.contains(rects.attack,rects.attack.get_center()),"圆形按钮中心可点击")
 	check(touch.driving(false).throttle==1.0,"触屏默认自动油门")
 	touch.press(41,rects.steer.get_center(),rects,false)
 	touch.drag(41,rects.steer.get_center()+Vector2(47.5,0))
