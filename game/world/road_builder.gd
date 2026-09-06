@@ -1,6 +1,7 @@
 extends Node3D
 
 const V = preload("res://game/visuals.gd")
+var mobile_quality: bool = false
 var route: Path3D
 var track: Dictionary
 var asphalt: StandardMaterial3D
@@ -206,7 +207,8 @@ func build_props(length: float) -> void:
 				var height = rng.randf_range(8,15)
 				pos.y = lerpf(pos.y-.06,land_height(pos),smoothstep(8.8,24,absf(lane)))+height*.5
 				var b = Basis.IDENTITY.scaled(Vector3(height*.65,height,1))
-				tree_transforms.append(Transform3D(b,pos))
+				if not mobile_quality or (i%2==0 and k==0):
+					tree_transforms.append(Transform3D(b,pos))
 	var post = BoxMesh.new()
 	post.size = Vector3(.10,1.08,.12)
 	multi(post,post_transforms,V.material(Color("72716b"),.6),450)
@@ -234,7 +236,7 @@ func build_props(length: float) -> void:
 	leaf.billboard_keep_scale = true
 	leaf.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	leaf.cull_mode = BaseMaterial3D.CULL_DISABLED
-	multi(quad,tree_transforms,leaf,850)
+	multi(quad,tree_transforms,leaf,500 if mobile_quality else 850)
 	for s in range(110,int(length),36):
 		var curve = route.curvature(float(s))
 		if absf(curve)>.009:

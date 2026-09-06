@@ -1,6 +1,9 @@
 extends Control
 
 const Controls = preload("res://game/systems/controls.gd")
+var touch_font = FontVariation.new()
+var touch_bold = FontVariation.new()
+var mobile = preload("res://game/mobile_hud.gd").new()
 var race: Node3D
 var font = SystemFont.new()
 var bold = SystemFont.new()
@@ -24,6 +27,10 @@ func _ready() -> void:
 		font.font_names = PackedStringArray(["Helvetica Neue","PingFang SC"])
 		bold.font_names = font.font_names
 		bold.font_weight = 800
+	touch_font.base_font = load("res://assets/fonts/NotoSansSC.ttf")
+	touch_font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):500}
+	touch_bold.base_font = touch_font.base_font
+	touch_bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):700}
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	garage_view = preload("res://game/garage_view.gd").new()
@@ -31,7 +38,14 @@ func _ready() -> void:
 	garage_view.visible = false
 
 func _process(_dt: float) -> void:
-	garage_view.visible = race.mode == "garage"
+	if race.touch.enabled and not mobile_landscape() and race.mode in ["racing","countdown"]:
+		race.suspend_input()
+	garage_view.visible = race.mode == "garage" and (not race.touch.enabled or mobile_landscape())
+	if race.touch.enabled:
+		var factor = mobile_scale()
+		garage_view.position = mobile_origin()+Vector2(448,130)*factor
+		garage_view.size = Vector2(488,maxf(100,mobile_height()-228))*factor
+		return
 	var scale_value = get_viewport_rect().size/Vector2(1440,900)
 	garage_view.position = Vector2(643,190)*scale_value
 	garage_view.size = Vector2(735,465)*scale_value
@@ -43,11 +57,34 @@ func enter_garage() -> void:
 	garage_view.show_bike(race.career.catalog.bikes[garage_index])
 
 
+func mobile_landscape() -> bool:
+	return get_viewport_rect().size.x>=get_viewport_rect().size.y
+
+func mobile_scale() -> float:
+	return minf(get_viewport_rect().size.x/960.0,get_viewport_rect().size.y/432.0)
+
+func mobile_origin() -> Vector2:
+	return Vector2((get_viewport_rect().size.x-960*mobile_scale())*.5,0)
+
+func mobile_height() -> float:
+	return get_viewport_rect().size.y/mobile_scale()
+
+func mobile_point(point: Vector2) -> Vector2:
+	return (point-mobile_origin())/mobile_scale()
+
+func control_mode_label() -> String:
+	return ["自动识别","触屏","键盘 / 手柄"][race.career.settings.control_mode]
+
+func cycle_control_mode() -> void:
+	race.career.settings.control_mode = (race.career.settings.control_mode+1)%3
+	race.apply_control_mode()
+	save_settings()
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
-		hover = event.position/get_viewport_rect().size*Vector2(1440,900)
+		hover = mobile_point(event.position) if race.touch.enabled else event.position/get_viewport_rect().size*Vector2(1440,900)
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var point = event.position/get_viewport_rect().size*Vector2(1440,900)
+		var point = mobile_point(event.position) if race.touch.enabled else event.position/get_viewport_rect().size*Vector2(1440,900)
 		for button in clicks:
 			if button.rect.has_point(point):
 				button.callback.call()
@@ -76,7 +113,8 @@ func save_settings() -> void:
 		race.notify("设置未能保存。",3)
 
 func text(value: String,x: float,y: float,size: int = 18,color: Color = Color("d8d3bd"),heavy: bool = false) -> void:
-	draw_string(bold if heavy else font,Vector2(x,y),value,HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
+	var selected_font = (touch_bold if heavy else touch_font) if race.touch.enabled else (bold if heavy else font)
+	draw_string(selected_font,Vector2(x,y),value,HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
 
 func panel(rect: Rect2, color: Color = Color(0.035,.042,.04,.94)) -> void:
 	draw_rect(rect,color)
@@ -89,7 +127,7 @@ func button(rect: Rect2,label: String,callback: Callable,primary: bool = false,d
 	if disabled:
 		color = Color("191e1c")
 	panel(rect,color)
-	text(label,rect.position.x+18,rect.position.y+rect.size.y*.5+7,20,faded if disabled else cream,true)
+	text(label,rect.position.x+18,rect.position.y+rect.size.y*.5+9,26 if race.touch.enabled else 20,faded if disabled else cream,true)
 	if not disabled:
 		clicks.append({"rect":rect,"callback":callback})
 
@@ -113,6 +151,11 @@ func dial(center: Vector2,radius: float,value: float,maximum: float,label: Strin
 	text(label,center.x-19,center.y+radius*.54,11,faded)
 
 func _draw() -> void:
+	if race != null and race.touch.enabled:
+		clicks.clear()
+		draw_set_transform(mobile_origin(),0,Vector2.ONE*mobile_scale())
+		mobile.draw(self)
+		return
 	draw_set_transform(Vector2.ZERO,0,get_viewport_rect().size/Vector2(1440,900))
 	clicks.clear()
 	if race == null or race.player == null:
@@ -217,7 +260,8 @@ func draw_settings() -> void:
 	text("手柄：RT 油门 / LT 刹车 / 左摇杆 转向",75,634,17,cream)
 	text("X 拳 / A 踢 / Y 武器 / B 格挡 / RB 蓄力",75,664,17,cream)
 	text("L3 闪避 / R3 夺械 / LB 定速 / Start 暂停",75,694,16,faded)
-	text("Music: Umplix (CC0) · Engines: dklon (CC-BY-SA 3.0)",75,764,13,faded)
+	button(Rect2(75,710,620,60),"操作："+control_mode_label(),func(): cycle_control_mode())
+	text("Music: Umplix (CC0) · Engines: dklon (CC-BY-SA 3.0)",75,797,13,faded)
 	var actions = Controls.LABELS.keys()
 	for i in range(actions.size()):
 		var action: String = actions[i]

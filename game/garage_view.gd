@@ -18,7 +18,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
-	viewport.msaa_3d = Viewport.MSAA_4X
+	viewport.msaa_3d = Viewport.MSAA_DISABLED if get_parent().race.touch_device else Viewport.MSAA_4X
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	add_child(viewport)
 	scene = Node3D.new()
@@ -63,7 +63,7 @@ func _ready() -> void:
 		light.light_color = data[1]
 		light.light_energy = data[2]
 		light.omni_range = 12
-		light.shadow_enabled = data[0].x>0
+		light.shadow_enabled = data[0].x>0 and not get_parent().race.touch_device
 		scene.add_child(light)
 	pivot = Node3D.new()
 	scene.add_child(pivot)
@@ -108,6 +108,9 @@ func update_camera() -> void:
 	camera.look_at(Vector3.UP*.65)
 
 func _process(dt: float) -> void:
+	if visible:
+		var aspect = maxf(.5,size.x/maxf(1,size.y))
+		camera.fov = rad_to_deg(2*atan(tan(deg_to_rad(32)*.5)*maxf(1,1.55/aspect))) if get_parent().race.touch.enabled else 32
 	if dragging and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT): dragging = false
 	if visible and auto_rotate and not dragging:
 		rotation_amount += dt*.22

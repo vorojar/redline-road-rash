@@ -11,8 +11,13 @@ const RacerAI = preload("res://game/systems/racer_ai.gd")
 const Traffic = preload("res://game/systems/traffic.gd")
 const Sound = preload("res://game/systems/sound.gd")
 const Combat = preload("res://game/systems/combat.gd")
+const TouchControls = preload("res://game/touch_controls.gd")
 const HUD = preload("res://game/hud.gd")
 
+var touch = TouchControls.new()
+var touch_device: bool = false
+var touch_punch: bool = true
+var web_suspend_callback
 var career = Career.new()
 var player = BikeState.new()
 var track: Dictionary
@@ -26,6 +31,7 @@ var racers: Array[Dictionary] = []
 var traffic: Array[Dictionary] = []
 var police: Dictionary
 var mode: String = "ready"
+var resume_mode: String = "racing"
 var elapsed: float = 0.0
 var countdown: float = 3.0
 var heat: float = 0.0
@@ -60,19 +66,29 @@ func _ready() -> void:
 	rng.seed = 812
 	if not test_mode:
 		career.load_profile()
+	touch_device = DisplayServer.is_touchscreen_available()
+	if OS.has_feature("web"):
+		touch_device = bool(JavaScriptBridge.eval("window.redlineTouchDevice === true"))
+		web_suspend_callback = JavaScriptBridge.create_callback(func(_args): suspend_input())
+		JavaScriptBridge.get_interface("window").redlineSuspend = web_suspend_callback
+	touch.enabled = touch_device if career.settings.control_mode == 0 else career.settings.control_mode == 1
+	if touch_device:
+		get_viewport().scaling_3d_scale = .75
+		get_viewport().msaa_3d = Viewport.MSAA_DISABLED
 	Controls.setup(career.settings.bindings)
 	track = career.catalog.tracks[0]
 	build_environment()
 	route = Route.new()
 	add_child(route)
 	world = RoadBuilder.new()
+	world.mobile_quality = touch_device
 	add_child(world)
 	route.curve = load("res://data/tracks/pine.tres")
 	world.build(route,track)
 	player_mesh = Actor.new()
 	add_child(player_mesh)
 	camera = Camera3D.new()
-	camera.far = 1250
+	camera.far = 700 if touch_device else 1250
 	camera.near = .1
 	add_child(camera)
 	camera.current = true
@@ -109,7 +125,7 @@ func build_environment() -> void:
 	sun.rotation_degrees = Vector3(-42,-48,0)
 	sun.light_color = Color("fff1db")
 	sun.light_energy = .72
-	sun.shadow_enabled = true
+	sun.shadow_enabled = not touch_device
 	sun.directional_shadow_max_distance = 100
 	add_child(sun)
 
@@ -117,6 +133,7 @@ func difficulty() -> Dictionary:
 	return career.catalog.difficulties[clampi(int(career.settings.difficulty),0,2)]
 
 func reset_race() -> void:
+	touch.clear()
 	for r in racers:
 		r.mesh.queue_free()
 	for car in traffic:
@@ -176,6 +193,7 @@ func select_track(index: int) -> bool:
 		track = next
 		world.free()
 		world = RoadBuilder.new()
+		world.mobile_quality = touch_device
 		add_child(world)
 		route.curve = load("res://data/tracks/"+str(track.id)+".tres")
 		world.build(route,track)
@@ -192,6 +210,7 @@ func start(practice: bool = false) -> void:
 			car.s += 1200
 
 func menu_action(action: String) -> void:
+	clear_touch()
 	sound.click()
 	match action:
 		"start": start(false)
@@ -203,9 +222,56 @@ func menu_action(action: String) -> void:
 		"home":
 			reset_race()
 			mode = "ready"
-		"resume": mode = "racing"
+		"resume": mode = resume_mode
 		"retry": start(tutorial)
 		"quit": get_tree().quit()
+
+func apply_control_mode() -> void:
+	clear_touch()
+	touch.enabled = touch_device if career.settings.control_mode == 0 else career.settings.control_mode == 1
+	hud.waiting_action = ""
+	hud.queue_redraw()
+
+func clear_touch() -> void:
+	touch.clear()
+	burst.charging = false
+	burst.charge = 0
+	burst.previous_held = false
+
+func suspend_input() -> void:
+	clear_touch()
+	for action in Controls.KEYS: Input.action_release(action)
+	if mode in ["racing","countdown"]:
+		resume_mode = mode
+		mode = "paused"
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_PAUSED]:
+		suspend_input()
+
+func can_touch_grab() -> bool:
+	if target_index<0 or mode!="racing": return false
+	var target: Dictionary = racers[target_index]
+	return target.weapon>0 and (target.windup>0 or target.stagger>0) and player.weapon==0 and absf(target.s-player.distance)<=2 and absf(target.lane-player.lane)<=2.2 and player.cooldown<=0 and player.crash_timer<=0 and player.stamina>=20 and player.dodge_time<=0
+
+func _input(event: InputEvent) -> void:
+	if not touch.enabled: return
+	if event is InputEventScreenTouch:
+		if not event.pressed or event.canceled:
+			touch.release(event.index,event.canceled)
+		elif mode in ["racing","countdown"] and hud.mobile_landscape():
+			var point = hud.mobile_point(event.position)
+			var action = touch.press(event.index,point,touch.layout(hud.mobile_height(),career.settings.touch_left_handed),can_touch_grab())
+			if action == "pause":
+				suspend_input()
+			elif action == "attack" and mode=="racing":
+				if attack(2 if player.weapon>0 else (0 if touch_punch else 1)):
+					touch_punch = not touch_punch
+			elif action == "grab" and mode=="racing": Combat.grab(self)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenDrag and touch.fingers.has(event.index):
+		touch.drag(event.index,hud.mobile_point(event.position))
+		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if hud.waiting_action != "":
@@ -220,8 +286,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_ENTER and mode in ["ready","finished"]:
 			start()
 	if event.is_action_pressed("pause"):
+		clear_touch()
 		if mode in ["racing","paused"]:
-			mode = "paused" if mode == "racing" else "racing"
+			if mode == "racing":
+				resume_mode = "racing"
+				mode = "paused"
+			else: mode = resume_mode
 		elif mode in ["settings","garage"]:
 			mode = "ready"
 	if event.is_action_pressed("restart") and mode in ["racing","paused","finished"]:
@@ -251,14 +321,14 @@ func _physics_process(dt: float) -> void:
 	if hit_stop>0:
 		hit_stop -= dt
 		return
-	var throttle = maxf(Input.get_action_strength("throttle"),1.0 if cruise else 0.0)
-	var brake = Input.get_action_strength("brake")
-	if brake>.1:
-		cruise = false
-		throttle = 0
-	var steer = Input.get_axis("left","right")
-	var boost = Input.is_action_pressed("boost")
-	simulate(dt,throttle,brake,steer,boost)
+	if touch.cancel_boost:
+		burst.charging = false
+		burst.charge = 0
+		burst.previous_held = false
+		touch.cancel_boost = false
+	var driving = touch.driving(cruise)
+	if driving.brake>.1: cruise = false
+	simulate(dt,driving.throttle,driving.brake,driving.steer,driving.boost)
 	player_mesh.ground_move(route.point(player.distance,player.lane),route.yaw(player.distance),dt)
 
 func _process(dt: float) -> void:
@@ -280,7 +350,7 @@ func simulate(dt: float, throttle: float, brake: float, steer: float, boost: boo
 	throttle_value = throttle
 	player.ground_slope = route.slope(player.distance)
 	player.curve_force = route.curvature(player.distance)
-	player.defend(dt,Input.is_action_pressed("guard"))
+	player.defend(dt,touch.driving(cruise).guard)
 	var boost_active = burst.update(dt,boost,throttle>.1 and brake<.1 and player.crash_timer<=0)
 	player.drive(dt,throttle,brake,steer,boost_active)
 	if player.crash_timer>0 and is_instance_valid(player_mesh.crash_rig):

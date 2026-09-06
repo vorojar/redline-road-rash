@@ -29,7 +29,7 @@ static func grab(race: Node3D) -> bool:
 	p.attack_kind = 0
 	p.attack_time = .44
 	race.feedback(false,r.mesh.global_position+Vector3.UP)
-	race.notify("夺得"+WEAPONS[p.weapon].name+"！按 L 挥击")
+	race.notify("夺得"+WEAPONS[p.weapon].name+("！点击攻击挥击" if race.touch.enabled else "！按 L 挥击"))
 	return true
 
 static func enemy_strike(race: Node3D, r: Dictionary) -> String:
