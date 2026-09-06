@@ -9,6 +9,7 @@ const V = preload("res://game/visuals.gd")
 var bike: Node3D
 var model_path: String = "res://assets/models/motorcycle.glb"
 var ride_speed: float = 0.0
+var celebration: float = 0.0
 var sport_tuck: float = 0.0
 var grip_height: float = 1.09
 var grip_forward: float = .51
@@ -262,7 +263,9 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 		var leg_start = hip+Vector3(sign_value*.14,0,0)
 		var ankle = Vector3(sign_value*.33,.40,.18)
 		var weapon_direction = Vector3(side*.15,.80,-.28).normalized()
-		if guarding:
+		if celebration>0:
+			hand = hand.lerp(arm_start+Vector3(sign_value*.27,.50,-.08),celebration)
+		elif guarding:
 			hand = head_start+Vector3(sign_value*.15,.1,-.21)
 		elif windup>0 and sign_value==side:
 			hand = hand.lerp(arm_start+Vector3(side*.13,.28,.22),smoothstep(0,.35,[.55,.8,.72][kind]-windup))

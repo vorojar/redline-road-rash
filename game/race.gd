@@ -1,5 +1,6 @@
 extends Node3D
 
+const FinishPresentation = preload("res://game/systems/finish_presentation.gd")
 const Burst = preload("res://game/systems/burst.gd")
 const BikeState = preload("res://game/bike_state.gd")
 const Actor = preload("res://game/vehicles/bike_actor.gd")
@@ -14,6 +15,7 @@ const Combat = preload("res://game/systems/combat.gd")
 const TouchControls = preload("res://game/touch_controls.gd")
 const HUD = preload("res://game/hud.gd")
 
+var finish_presentation = FinishPresentation.new()
 var touch = TouchControls.new()
 var touch_device: bool = false
 var primary_punch: bool = true
@@ -134,6 +136,8 @@ func difficulty() -> Dictionary:
 
 func reset_race() -> void:
 	touch.clear()
+	finish_presentation = FinishPresentation.new()
+	player_mesh.celebration = 0
 	for r in racers:
 		r.mesh.queue_free()
 	for car in traffic:
@@ -144,6 +148,7 @@ func reset_race() -> void:
 	traffic.clear()
 	player = BikeState.new()
 	player.configure(career.bike())
+	sound.configure_engine(career.selected)
 	player.assist = career.settings.assist
 	player_mesh.clear_crash()
 	player_mesh.set_model(career.bike())
@@ -295,7 +300,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			debug_hud = not debug_hud
 		if event.keycode == KEY_M:
 			career.settings.volume = 0.0 if career.settings.volume>0 else .7
-		if event.keycode == KEY_ENTER and mode in ["ready","finished"]:
+		if event.keycode == KEY_ENTER and (mode=="ready" or (mode=="finished" and finish_presentation.buttons_ready())):
 			start()
 	if event.is_action_pressed("pause"):
 		clear_touch()
@@ -306,7 +311,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			else: mode = resume_mode
 		elif mode in ["settings","garage"]:
 			mode = "ready"
-	if event.is_action_pressed("restart") and mode in ["racing","paused","finished"]:
+	if event.is_action_pressed("restart") and (mode in ["racing","paused"] or (mode=="finished" and finish_presentation.buttons_ready())):
 		start(tutorial)
 	if event is InputEventJoypadButton and event.pressed and mode == "ready" and event.button_index in [JOY_BUTTON_A,JOY_BUTTON_START]:
 		start()
@@ -344,13 +349,18 @@ func _physics_process(dt: float) -> void:
 	player_mesh.ground_move(route.point(player.distance,player.lane),route.yaw(player.distance)+player.heading_offset,dt)
 
 func _process(dt: float) -> void:
+	if mode=="finished":
+		if finish_presentation.update(dt): sound.celebrate()
+		player_mesh.celebration = smoothstep(.9,1.6,finish_presentation.age) if finish_presentation.champion else 0.0
 	if mode != "paused":
 		update_visuals(dt)
 	message_time = maxf(0,message_time-dt)
 	shake = maxf(0,shake-dt*2)
 	flash = maxf(0,flash-dt*3)
 	var pursuit = clampf(1-absf(player.distance-police.s)/100,0,1) if police.active else 0.0
-	sound.update(player.speed,throttle_value,pursuit,mode == "racing",career.settings.volume,absf(player.lane)>6.5,dt,career.settings.music,absf(player.steering_rate)*player.speed)
+	var audible_speed: float = finish_presentation.speed if mode=="finished" else player.speed
+	var audible_throttle: float = Input.get_action_strength("throttle") if mode=="countdown" else throttle_value if mode=="racing" else 0.0
+	sound.update(audible_speed,audible_throttle,pursuit,mode == "racing",career.settings.volume,absf(player.lane)>6.5,dt,career.settings.music,absf(player.steering_rate)*player.speed,mode=="countdown" or (mode=="finished" and result=="FINISH" and finish_presentation.age<1.8))
 	hud.queue_redraw()
 	if mode == "racing":
 		frame_samples.append(dt)
@@ -521,6 +531,11 @@ func finish(title: String, subtitle: String) -> void:
 	mode = "finished"
 	result = title
 	message = subtitle
+	clear_touch()
+	pending_attack = 0
+	player.attack_time = 0
+	player.guarding = false
+	finish_presentation.begin(title,rank==1 and not tutorial,player.distance,player.speed)
 	if not settled:
 		settled = true
 		if title == "FINISH" and not tutorial:
@@ -537,14 +552,15 @@ func notify(value: String, duration: float = 2.4) -> void:
 	message_time = duration
 
 func update_visuals(dt: float) -> void:
+	var visual_distance: float = finish_presentation.distance if mode=="finished" and finish_presentation.active else player.distance
 	camera.cull_mask = 0 if mode=="garage" else 1048575
 	if mode in ["ready","garage","settings","finished","countdown"]:
-		player_mesh.position = route.point(player.distance,player.lane)
-		player_mesh.rotation.y = route.yaw(player.distance)+player.heading_offset
-	player_mesh.ride_speed = player.speed
+		player_mesh.position = route.point(visual_distance,player.lane)
+		player_mesh.rotation.y = route.yaw(visual_distance)+player.heading_offset
+	player_mesh.ride_speed = finish_presentation.speed if mode=="finished" else player.speed
 	player_mesh.set_combat(player.weapon,player.guarding,player.dodge_time,0)
 	player_mesh.crash_velocity = route.tangent(player.distance)*player.crash_speed*maxf(0,cos(player.heading_offset))*.35+Basis(Vector3.UP,route.yaw(player.distance)).x*player.crash_lateral
-	player_mesh.pose(elapsed,player.lean,route.slope(player.distance),player.crash_timer,player.attack_time,player.attack_side,player.attack_kind,flash,player.distance)
+	player_mesh.pose(elapsed,player.lean,route.slope(player.distance),player.crash_timer,player.attack_time,player.attack_side,player.attack_kind,flash,visual_distance)
 	for r in racers:
 		r.mesh.position = route.point(r.s,r.lane)
 		r.mesh.rotation.y = route.yaw(r.s)
@@ -559,9 +575,13 @@ func update_visuals(dt: float) -> void:
 	police.mesh.position = route.point(police.s,police.lane)
 	police.mesh.rotation.y = route.yaw(police.s)
 	var pos = player_mesh.position
-	var direction = route.tangent(player.distance).rotated(Vector3.UP,player.heading_offset)
+	var direction = route.tangent(visual_distance).rotated(Vector3.UP,player.heading_offset)
 	var desired = pos-direction*4.3+Vector3.UP*1.95
 	var look = pos+direction*16+Vector3.UP*1.25
+	if mode=="finished" and finish_presentation.champion:
+		var turn = smoothstep(.55,2.2,finish_presentation.age)
+		desired = desired.lerp(pos+direction*3.8+player_mesh.global_basis.x*3+Vector3.UP*1.9,turn)
+		look = look.lerp(pos+Vector3.UP*1.05,turn)
 	if mode in ["ready","garage","settings"]:
 		desired = pos+Vector3(3.6,1.9,3.8)
 		look = pos+Vector3(0,.9,0)

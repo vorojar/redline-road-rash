@@ -3,7 +3,7 @@
     {
       "id": "ratchet",
       "name": "RATCHET 750",
-      "description": "风冷四缸 · 钢管车架 · 易于控制",
+      "description": "运动双缸 · 钢管车架 · 易于控制",
       "price": 0,
       "top_speed": 53.0,
       "acceleration": 12.8,
@@ -19,7 +19,7 @@
     {
       "id": "revenant",
       "name": "REVENANT 900",
-      "description": "高扭矩 · 强化车架 · 耐久优势",
+      "description": "巡航 V 双缸 · 强化车架 · 耐久优势",
       "price": 1800,
       "top_speed": 57.0,
       "acceleration": 14.0,
@@ -35,7 +35,7 @@
     {
       "id": "phantom",
       "name": "PHANTOM 1100",
-      "description": "轻量车身 · 高转速 · 极限极速",
+      "description": "轻量车身 · 高转四缸 · 极限极速",
       "price": 5200,
       "top_speed": 63.0,
       "acceleration": 16.0,

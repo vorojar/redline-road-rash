@@ -1,4 +1,5 @@
 extends Control
+const FinishOverlay = preload("res://game/finish_overlay.gd")
 
 const Controls = preload("res://game/systems/controls.gd")
 var touch_font = FontVariation.new()
@@ -365,22 +366,18 @@ func draw_mini_map(center: Vector2) -> void:
 	text("ROUTE",center.x-24,center.y+65,11,faded)
 
 func draw_overlay() -> void:
+	if race.mode=="finished":
+		FinishOverlay.draw(self,1440,900)
+		return
 	draw_rect(Rect2(0,0,1440,730),Color(.02,.03,.025,.6))
 	if race.mode == "countdown":
 		text(str(int(ceil(race.countdown))),659,398,112,gold,true)
 		text("油门准备  /  RT 或 W",602,451,21)
 		return
 	panel(Rect2(410,150,620,505))
-	text("PAUSED" if race.mode == "paused" else race.result,450,221,49,cream,true)
-	text("比赛已暂停" if race.mode == "paused" else race.message,450,269,22,gold)
-	if race.mode == "finished":
-		text("名次 %d / 6    用时 %.2f s" % [race.rank,race.elapsed],450,320,21)
-		text("击倒 %d    环境击倒 %d    最长连击 %d" % [race.player.knockouts,race.player.environment_kos,race.player.best_combo],450,363,19)
-		text("奖金  $%d      余额  $%d" % [race.reward,race.career.credits],450,408,24,gold,true)
-		if "coast" in race.career.unlocked:
-			text("海岸断崖赛事已解锁",450,445,16,faded)
-	else:
-		text("WASD / 方向键 驾驶   J K L 攻击",450,330,21)
-		text("刹车会取消定速油门。",450,375,19,faded)
-	button(Rect2(450,480,540,56),"继续比赛 / ESC" if race.mode == "paused" else "再赛一局 / R",func(): race.menu_action("resume" if race.mode == "paused" else "retry"),true)
+	text("PAUSED",450,221,49,cream,true)
+	text("比赛已暂停",450,269,22,gold)
+	text("WASD / 方向键 驾驶   左键 / J K L 攻击",450,330,21)
+	text("刹车会取消定速油门。",450,375,19,faded)
+	button(Rect2(450,480,540,56),"继续比赛 / ESC",func(): race.menu_action("resume"),true)
 	button(Rect2(450,552,540,51),"返回赛事 / 车库",func(): race.menu_action("home"))

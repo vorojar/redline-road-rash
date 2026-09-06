@@ -138,6 +138,9 @@ func draw_race(h, height: float) -> void:
 
 func draw_overlay(h, height: float) -> void:
 	var race = h.race
+	if race.mode=="finished":
+		h.FinishOverlay.draw(h,960,height)
+		return
 	if race.mode == "countdown":
 		h.text(str(int(ceil(race.countdown))),448,height*.50,80,h.gold,true)
 		h.text("自动油门 · 准备转向",344,height*.50+45,26,h.cream)
@@ -145,12 +148,8 @@ func draw_overlay(h, height: float) -> void:
 	h.panel(Rect2(0,90,960,height-90),Color(.02,.03,.025,.75))
 	var y = maxf(96,(height-324)*.5)
 	h.panel(Rect2(204,y,552,324),Color("101713"))
-	h.text("比赛已暂停" if race.mode=="paused" else race.result,230,y+47,36,h.cream,true)
-	if race.mode == "paused":
-		h.text("滑动转向 · 点击攻击",230,y+91,26,h.gold)
-		h.text("按住刹车减速，松开后自动加速。",230,y+130,24,h.faded)
-	else:
-		h.text("名次 %d / 6 · 用时 %.1f s" % [race.rank,race.elapsed],230,y+91,26,h.gold)
-		h.text("奖金 $%d · 余额 $%d" % [race.reward,race.career.credits],230,y+130,26,h.cream)
-	h.button(Rect2(230,y+164,500,64),"继续比赛" if race.mode=="paused" else "再赛一局",func(): race.menu_action("resume" if race.mode=="paused" else "retry"),true)
+	h.text("比赛已暂停",230,y+47,36,h.cream,true)
+	h.text("滑动转向 · 点击攻击",230,y+91,26,h.gold)
+	h.text("按住刹车减速，松开后自动加速。",230,y+130,24,h.faded)
+	h.button(Rect2(230,y+164,500,64),"继续比赛",func(): race.menu_action("resume"),true)
 	h.button(Rect2(230,y+242,500,64),"返回赛事 / 车库",func(): race.menu_action("home"))

@@ -1,8 +1,11 @@
 extends Node
 const Combat = preload("res://game/systems/combat.gd")
+const EngineVoice = preload("res://game/systems/engine_voice.gd")
 
-var engine: AudioStreamPlayer
-var idle: AudioStreamPlayer
+var engine_voice = EngineVoice.new()
+var engine_layers: Dictionary = {}
+var was_running: bool = false
+var victory_count: int = 0
 var music: AudioStreamPlayer
 var wind: AudioStreamPlayer
 var tire: AudioStreamPlayer
@@ -28,8 +31,8 @@ func _ready() -> void:
 		limiter.pre_gain_db = 7
 		limiter.ceiling_db = -1
 		AudioServer.add_bus_effect(0,limiter)
-	engine = loop_player("res://assets/audio/engine.wav",-80)
-	idle = loop_player("res://assets/audio/engine_idle.wav",-80)
+	for layer in engine_voice.gains:
+		engine_layers[layer] = loop_player("res://assets/audio/engines/ratchet_"+layer+".wav",-80)
 	music = loop_player("res://assets/audio/roadway.ogg",-24)
 	wind = loop_player("res://assets/audio/wind.wav",-80)
 	tire = loop_player("res://assets/audio/tire.wav",-80)
@@ -40,10 +43,33 @@ func _ready() -> void:
 		var voice = AudioStreamPlayer.new()
 		add_child(voice)
 		voices.append(voice)
+	effects["engine_pop"] = load("res://assets/audio/engines/ratchet_pop.wav")
+	effects["engine_start"] = load("res://assets/audio/engines/ratchet_start.wav")
+	effects["victory"] = load("res://assets/audio/engines/victory.wav")
 	ui = AudioStreamPlayer.new()
 	ui.stream = load("res://assets/audio/menu.wav")
 	ui.volume_db = -19
 	add_child(ui)
+
+func configure_engine(id: String) -> void:
+	engine_voice.configure(id)
+	gear = 1
+	was_running = false
+	for layer in engine_layers:
+		var stream: AudioStreamWAV = load("res://assets/audio/engines/"+id+"_"+layer+".wav")
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_end = stream.data.size()/(4 if stream.stereo else 2)
+		engine_layers[layer].stream = stream
+		engine_layers[layer].volume_db = -80
+		engine_layers[layer].play()
+	if not effects.is_empty():
+		effects.engine_pop = load("res://assets/audio/engines/"+id+"_pop.wav")
+		effects.engine_start = load("res://assets/audio/engines/"+id+"_start.wav")
+
+func celebrate() -> void:
+	victory_count+=1
+	play_effect("victory",-12,1)
+	duck_time = 2.6
 
 func loop_player(path: String, volume: float) -> AudioStreamPlayer:
 	var player = AudioStreamPlayer.new()
@@ -59,7 +85,7 @@ func loop_player(path: String, volume: float) -> AudioStreamPlayer:
 	player.play()
 	return player
 
-func update(speed: float, throttle: float, pursuit: float, racing: bool, volume: float, offroad: bool = false, dt: float = 1.0/60, music_volume: float = .65, corner_load: float = 0) -> void:
+func update(speed: float, throttle: float, pursuit: float, racing: bool, volume: float, offroad: bool = false, dt: float = 1.0/60, music_volume: float = .65, corner_load: float = 0, motor_running: bool = false) -> void:
 	var next_gear = gear
 	if speed>gear*13.0+2 and gear<5: next_gear += 1
 	elif speed<(gear-1)*13.0-2 and gear>1: next_gear -= 1
@@ -71,21 +97,24 @@ func update(speed: float, throttle: float, pursuit: float, racing: bool, volume:
 		gear = next_gear
 	shift_time = maxf(0,shift_time-dt)
 	duck_time = maxf(0,duck_time-dt)
-	var ratio: float = [2.9,2.05,1.55,1.24,1.0][gear-1]
-	var target_rpm = clampf(.70+speed*ratio*.017+throttle*.10,.75,1.95)
-	rpm = lerpf(rpm,target_rpm,minf(dt*13,1))
-	if engine == null: return
-	AudioServer.set_bus_volume_db(0,linear_to_db(clampf(volume,.0001,1))+(5 if OS.has_feature("web") else 0))
-	engine.pitch_scale = rpm
-	var load_gain = smoothstep(0,18,speed)*lerpf(.48,1,throttle)
-	engine.volume_db = -13+linear_to_db(maxf(.0001,load_gain))-(7 if shift_time>0 else 0) if racing else -80
-	idle.pitch_scale = lerpf(.92,1.20,clampf(speed/20,0,1))
-	idle.volume_db = -20+linear_to_db(maxf(.0001,1-load_gain*.8)) if racing else -80
+	var running: bool = racing or motor_running
+	if running and not was_running:
+		play_effect("engine_start",-13,1)
+		was_running = true
+	if engine_voice.update(dt,speed,throttle,gear,running):
+		play_effect("engine_pop",-18 if engine_voice.bike_id=="revenant" else -16,1)
+	rpm = engine_voice.rpm/engine_voice.spec.idle_rpm
+	if engine_layers.is_empty(): return
+	AudioServer.set_bus_volume_db(0,linear_to_db(clampf(volume,.0001,1)))
+	for layer in engine_layers:
+		var voice: AudioStreamPlayer = engine_layers[layer]
+		voice.pitch_scale = engine_voice.pitches[layer]
+		voice.volume_db = -10+linear_to_db(maxf(.0001,engine_voice.gains[layer]))-(5 if shift_time>0 else 0)
 	wind.volume_db = lerpf(-65,-23,clampf(speed/65,0,1)) if racing else -80
 	tire.volume_db = (-25 if offroad else lerpf(-44,-23,clampf((corner_load-12)/15,0,1))) if racing and speed>3 else -80
 	tire.pitch_scale = .85+speed*.007
 	siren.volume_db = lerpf(-60,-18,pursuit) if pursuit>0 and racing else -80
-	var music_db = (-10 if racing else -12)+linear_to_db(maxf(music_volume,.0001))-(5 if duck_time>0 else 0)
+	var music_db = (-17 if running else -15)+linear_to_db(maxf(music_volume,.0001))-(5 if duck_time>0 else 0)
 	music.volume_db = lerpf(music.volume_db,music_db,minf(dt*5,1))
 
 func play_effect(name: String, db: float, pitch: float) -> void:

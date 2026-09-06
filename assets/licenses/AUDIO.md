@@ -19,3 +19,8 @@ Original archive retained at assets/audio/source/dklon-engines.zip; reproducible
 
 ## Original Foley
 hit_0–2, wood_0–2, metal_0–2, swing, shift, crash, tire, wind, siren and menu are deterministic layered synthesis created for this project (scripts/build_audio.py). They do not contain excerpts from the engine recordings or music.
+
+## Engine sound banks and finish cue (2026-09)
+`assets/audio/engines/{ratchet,revenant,phantom}_{idle,low,high,coast,pop,start}.wav` are phase-continuous layered exhaust banks. The idle/low/high/coast/start banks combine project-generated firing pulses and resonances with edited high-frequency mechanical texture from dklon's recordings `090912-004.mp3` (24 s onward), `090912-017.mp3` (3 s onward) and `090913-009.mp3` (3 s onward). These adapted banks are distributed under CC-BY-SA 3.0, with the same attribution and source URL above. Editing includes filtering, circular loop blending, resampling, synthesized firing timing and gain normalization; rebuild with `uv run scripts/build_engine_audio.py`.
+
+The pop cues and `victory.wav` are original project synthesis (no third-party recording excerpts). Engine styles are fictional sport-twin, cruiser-twin and inline-four interpretations, not recordings or endorsements of any named motorcycle brand.

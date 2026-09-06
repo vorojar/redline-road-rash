@@ -1,0 +1,5 @@
+{
+  "ratchet": {"label":"运动双缸", "idle_rpm":1100, "redline":9500, "firing":[0.0,0.375], "body_hz":110, "brightness":0.7, "recording":"090912-004.mp3", "texture_start":24.0},
+  "revenant": {"label":"巡航 V 双缸", "idle_rpm":850, "redline":6200, "firing":[0.0,0.4375], "body_hz":78, "brightness":0.4, "recording":"090912-017.mp3", "texture_start":3.0},
+  "phantom": {"label":"高转四缸", "idle_rpm":1350, "redline":12500, "firing":[0.0,0.25,0.5,0.75], "body_hz":155, "brightness":1.0, "recording":"090913-009.mp3", "texture_start":3.0}
+}
