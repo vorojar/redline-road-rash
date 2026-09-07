@@ -32,3 +32,6 @@ Web 字体：`fonts/RedlineUI.ttf` 为 Noto Sans SC 的字形子集，由 `scrip
 
 
 人体基础网格、成年体型形变及蒙皮权重：MakeHuman Community 核心资产，CC0 1.0。固定来源提交 `a8bc2d54ff0ac92e78ff71431b1023eda42bf482`，原始资产保存在 `models/source/makehuman/`，未引入 MakeHuman 应用程序代码。`scripts/build_human_body.py` 应用成年体型、保留连续人体拓扑，将权重映射到游戏骨骼，调整手指握姿并生成赛车服表面；头盔与护靴为本项目几何。资产来源：https://github.com/makehumancommunity/makehuman/tree/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data 。授权说明：https://static.makehumancommunity.org/about/license.html 。CC0 全文附 `MAKEHUMAN_CC0.txt`。
+
+
+网页首页封面：使用内置 imagegen 生成的原创公路摩托竞速主题图。原始 PNG 保存在 `branding/source/title-road.png`，网页 WebP 为 `web/title-road.webp`，生成提示词保存在 `branding/source/title-road-prompt.txt`。这是首页宣传插画，不是游戏运行截图。
