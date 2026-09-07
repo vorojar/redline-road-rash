@@ -74,6 +74,8 @@ python3 -m http.server 5033 --directory outputs/web
 
 网页发布文件保存在 `gh-pages` 分支，由 GitHub Pages 提供 HTTPS。`main` 分支保存源代码和资源。
 
+网页首页使用原创封面图，加载进度直接显示在开始按钮内。`scripts/finalize_web.py` 为游戏包、引擎及封面生成内容指纹；`web/cache-worker.js` 只持久缓存这些不可变资源，首页 HTML 保持联网更新。刷新后相同版本从本地缓存读取，更新游戏包不会重新下载未变的引擎；资源缓存保留每类最近两版，不操作生涯存档。缓存不可用或被浏览器清理时会重新下载，仍可正常启动。
+
 ## 项目结构
 
 | 路径 | 内容 |
