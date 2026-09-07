@@ -41,7 +41,7 @@ func _physics_process(dt):
 	var safest=2.0
 	var best_score=-INF
 	for candidate in [-4.8,-1.6,1.6,4.8]:
-		var score= -absf(candidate-player.lane)*.35 + (2.0 if candidate>0 else 0)
+		var score= -absf(candidate-player.lane)*.35 + (2.0 if candidate>0 else -100.0)
 		for car in race.traffic:
 			var gap=car.s-player.distance
 			if gap>-5 and gap<maxf(32,absf(player.speed-car.speed)*1.5):
@@ -53,6 +53,7 @@ func _physics_process(dt):
 		if score>best_score:best_score=score;safest=candidate
 	var service=race.endurance.index>=0 and race.endurance.stages[race.endurance.index].kind=="service" and race.endurance.index not in race.endurance.serviced and player.distance<race.endurance.stages[race.endurance.index].start+450
 	lane_target=6.15 if service else safest
+	player.curve_force=race.route.curvature(player.distance)
 	var steer=Driver.steer(player,lane_target)
 	var clear_road = absf(steer)<.6
 	for car in race.traffic:
@@ -61,6 +62,11 @@ func _physics_process(dt):
 	for ahead in [15,30,50,70]: upcoming_curve=maxf(upcoming_curve,absf(race.route.curvature(player.distance+ahead)))
 	var safe_speed = player.corner_speed(upcoming_curve,player.top_speed,player.handling)
 	var brake = clampf((player.speed-safe_speed)*.22,0,1)
+	for car in race.traffic:
+		var gap=car.s-player.distance
+		var closing=maxf(0,player.speed-car.speed)
+		if car.speed>=0 and gap>0 and gap<maxf(12,closing*closing/50+8) and absf(car.lane-player.lane)<2.1:
+			brake=maxf(brake,clampf(closing*.18,0,1))
 	if service: brake=1.0 if player.lane>5.8 else maxf(brake,clampf((player.speed-15)*.2,0,1))
 	var throttle = 1.0 if brake<.05 else 0.0
 	clear_road = clear_road and upcoming_curve<.003

@@ -317,7 +317,6 @@ func draw_race() -> void:
 	text(str(race.sound.gear),648,823,35,gold,true)
 	text("BURST",635,851,12,faded)
 	bar(635,862,86,race.nitro,gold)
-	text(race.burst.label(),493,888,13,gold if race.burst.charging else faded)
 	text("POSITION",770,778,13,faded)
 	text("%d / 6" % race.rank,770,827,41,cream,true)
 	text("%02d:%05.2f" % [int(race.elapsed)/60,fmod(race.elapsed,60)],770,859,19,faded)
@@ -326,7 +325,6 @@ func draw_race() -> void:
 	text("%d KO   /   %d 环境击倒" % [p.knockouts,p.environment_kos],951,831,17,cream)
 	text("%d 连击" % p.combo,951,862,15,gold)
 	draw_mini_map(Vector2(1300,818))
-	text("J 拳  K 踢  L 武器  ·  U 格挡  I 闪避  O 夺械  ·  SHIFT 蓄力  SPACE 定速",398,710,14,cream)
 	panel(Rect2(40,570,270,116))
 	text(race.Combat.WEAPONS[p.weapon].name+"  /  "+("格挡中" if p.guarding else ("反击！" if p.counter_time>0 else "就绪")),58,601,19,gold,true)
 	text("体力",58,632,14,faded)
@@ -350,14 +348,6 @@ func draw_race() -> void:
 		if opponent==race.target_index and not race.camera.is_position_behind(world_pos):
 			var screen = race.camera.unproject_position(world_pos)/get_viewport_rect().size*Vector2(1440,900)
 			draw_arc(screen,13,0,TAU,20,red if (r.windup>0 and r.combat_target==-1) else gold,2)
-	if race.message_time>0 and race.mode == "racing":
-		panel(Rect2(447,637,546,45))
-		text(race.message,465,667,19,cream,true)
-	if p.crash_timer>0 and race.mode == "racing":
-		var step = "滑行 / 失去控制" if p.crash_timer>4.2 else ("撑地 / 起身" if p.crash_timer>3.25 else ("走回摩托" if p.crash_timer>1.55 else ("抓把 / 扶车" if p.crash_timer>.75 else "跨腿上车")))
-		panel(Rect2(490,294,460,116))
-		text("CRASH",527,339,34,red,true)
-		text(step+"   %.1f s" % p.crash_timer,527,382,22,cream)
 	if race.tutorial and race.mode == "racing":
 		var lessons = ["01  按住油门，达到 70 km/h","02  左右转向，移动到另一条车道","03  靠近骑手，按 J / K / L 命中一次","04  按住 Shift 蓄满，再松开冲刺","教学完成 · 继续挑战终点，练习中不会报废"]
 		panel(Rect2(415,30,610,59))

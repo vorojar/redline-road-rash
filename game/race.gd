@@ -10,6 +10,7 @@ const Controls = preload("res://game/systems/controls.gd")
 const Route = preload("res://game/world/route.gd")
 const RoadBuilder = preload("res://game/world/road_builder.gd")
 const RacerAI = preload("res://game/systems/racer_ai.gd")
+const Contacts = preload("res://game/systems/vehicle_contacts.gd")
 const Traffic = preload("res://game/systems/traffic.gd")
 const Sound = preload("res://game/systems/sound.gd")
 const Combat = preload("res://game/systems/combat.gd")
@@ -168,6 +169,8 @@ func reset_race() -> void:
 	sound.configure_engine(career.selected)
 	player.assist = career.settings.assist
 	player_mesh.clear_crash()
+	player_mesh.contact_started=-100.0
+	player_mesh.contact_strength=0.0
 	player_mesh.set_model(career.bike())
 	player_mesh.style_rider(Color("354f68"),Color("eee4cd"))
 	player_mesh.position = route.point(0,player.lane)
@@ -204,7 +207,7 @@ func reset_race() -> void:
 	add_child(cop)
 	var support=Traffic.vehicle(Color("babfc3"),false,true)
 	add_child(support)
-	police = {"support_mesh":support,"support_active":false,"support_s":-140.0,"support_lane":-2.0,"support_warning":0.0,"mesh":cop,"s":-90.0,"lane":2.0,"active":false,"warning":0.0,"arrest":0.0,"roadblock":false}
+	police = {"speed":0.0,"support_speed":0.0,"support_mesh":support,"support_active":false,"support_s":-140.0,"support_lane":-2.0,"support_warning":0.0,"mesh":cop,"s":-90.0,"lane":2.0,"active":false,"warning":0.0,"arrest":0.0,"roadblock":false}
 	for hazard in world.hazards:
 		hazard.hit = false
 		hazard.node.rotation = Vector3.ZERO
@@ -419,6 +422,7 @@ func _process(dt: float) -> void:
 			frame_samples.pop_front()
 
 func simulate(dt: float, throttle: float, brake: float, steer: float, boost: bool) -> void:
+	var contact_start = Contacts.snapshot(self)
 	elapsed += dt
 	throttle_value = throttle
 	player.ground_slope = route.slope(player.distance)
@@ -440,6 +444,7 @@ func simulate(dt: float, throttle: float, brake: float, steer: float, boost: boo
 	endurance.update(self,dt)
 	RacerAI.update(self,dt)
 	Traffic.update(self,dt)
+	Contacts.resolve(self,contact_start)
 	rank = 1
 	for r in racers:
 		if r.finished or r.s>player.distance:
@@ -624,6 +629,8 @@ func update_visuals(dt: float) -> void:
 	for car in traffic:
 		car.mesh.position = route.point(car.s,car.lane)
 		car.mesh.rotation = Vector3(route.slope(car.s),route.yaw(car.s)+(PI if car.speed<0 else 0),0)
+	police.support_mesh.get_node("VehicleSolid").collision_layer=8 if police.active and police.support_active else 0
+	police.mesh.get_node("VehicleSolid").collision_layer=8 if police.active else 0
 	police.support_mesh.visible=police.active and police.support_active
 	police.support_mesh.position=route.point(police.support_s,police.support_lane)
 	police.support_mesh.rotation.y=route.yaw(police.support_s)

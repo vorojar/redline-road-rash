@@ -129,11 +129,6 @@ func draw_race(h, height: float) -> void:
 			var advised = int(p.corner_speed(preview,p.top_speed,p.handling)*3.6/10)*10
 			h.panel(Rect2(288,102,384,48))
 			h.text(("左弯" if preview>0 else "右弯")+" · 建议 %d km/h" % advised,308,135,26,h.gold)
-		if race.message_time>0:
-			h.text(race.message,300,187,24,h.cream)
-		if p.crash_timer>0:
-			h.panel(Rect2(288,162,384,62))
-			h.text("摔车 · 起身 %.1f s" % p.crash_timer,310,205,28,h.red,true)
 		if race.tutorial:
 			var lessons = ["自动加速至 70 km/h","滑动转向，换到另一条车道","靠近对手，点击攻击命中","按住蓄力，蓄满后松开冲刺","教学完成 · 继续挑战终点"]
 			h.text(lessons[race.lesson],288,224,24,h.gold)

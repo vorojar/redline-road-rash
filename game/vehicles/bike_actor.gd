@@ -32,6 +32,9 @@ var recovery_segments: Dictionary = {}
 var held_weapon: int = 0
 var guarding: bool = false
 var dodging: float = 0
+var contact_started: float = -100.0
+var contact_strength: float = 0.0
+var contact_side: float = 0.0
 var recoil_side: float = 0
 var recoil_strength: float = 0
 var recoil_started: float = -100.0
@@ -156,6 +159,18 @@ func ground_move(target: Vector3, yaw: float, dt: float) -> void:
 	spring_height = .035-(front_compression+rear_compression)*.5
 	suspension_pitch = atan2(rear_compression-front_compression,1.34)
 
+func contact_hit(time: float, strength: float, side: float) -> void:
+	if time-contact_started<.3: return
+	contact_started=time
+	contact_strength=strength
+	contact_side=side
+
+func contact_pose(time: float) -> Vector3:
+	var age=time-contact_started
+	if age<0 or age>.65: return Vector3.ZERO
+	var envelope=exp(-age*6)*sin(age*22)
+	return Vector3(-.24*envelope,0,contact_side*.15*envelope)*contact_strength
+
 func bone(name: String, a: Vector3, b: Vector3, roll: float = 0) -> void:
 	if not bone_ids.has(name):
 		return
@@ -197,6 +212,7 @@ func react_to_hit(direction: float, kind: int, time: float) -> void:
 	recoil_started = time
 
 func pose(time: float, lean: float, slope: float, crash_time: float, attack: float, side: float, kind: int, stagger: float = 0, travel: float = 0) -> void:
+	collision_layer=0 if crash_time>0 else 2
 	if crash_time > 4.2:
 		if not is_instance_valid(crash_rig):
 			crash_rig = CrashRig.new()
@@ -212,7 +228,7 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 		if wheel != null:
 			wheel.rotation.x = -fmod(travel/.34,TAU)
 			wheel.position.y = .34 + (front_compression if wheel_name=="WheelFront" else rear_compression)-.035-spring_height
-	bike.rotation = Vector3(slope+suspension_pitch,0,lean)
+	bike.rotation = Vector3(slope+suspension_pitch,0,lean)+contact_pose(time)
 	rider.rotation = bike.rotation
 	rider.position = Vector3(0,spring_height,0)
 	bike.position = Vector3(0,spring_height,0)
@@ -235,6 +251,9 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 		recovery_blend = smoothstep(0,.38,passed)
 		recovery_motion.apply(self,passed)
 		return
+	var body_recoil=contact_pose(time)
+	shoulder.z+=body_recoil.x*.85
+	head_start.z+=body_recoil.x*1.15
 	var duck = sin(clampf(dodging/.38,0,1)*PI) if dodging>0 else 0.0
 	shoulder += Vector3(0,-.12*duck,-.07*duck)
 	head_start += Vector3(0,-.15*duck,-.07*duck)

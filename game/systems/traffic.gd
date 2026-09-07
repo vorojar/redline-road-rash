@@ -37,6 +37,15 @@ static func vehicle(color: Color, truck: bool = false, police: bool = false) -> 
 		for x in [-1.08,1.08]:
 			for z in range(-8,36,4):
 				V.box(car,Vector3(.025,2.2,.025),Vector3(x,1.85,z*.1),Color("8a897b"))
+	var solid=StaticBody3D.new()
+	solid.name="VehicleSolid"
+	solid.collision_layer=8; solid.collision_mask=4
+	var collider=CollisionShape3D.new()
+	var shape=BoxShape3D.new()
+	shape.size=Vector3(2.16,2.7 if truck else 1.6,6.1 if truck else 4.2)
+	collider.shape=shape
+	collider.position=Vector3(0,1.35 if truck else .8,.9 if truck else 0)
+	solid.add_child(collider); car.add_child(solid)
 	return car
 
 static func update(race: Node3D, dt: float) -> void:
@@ -48,17 +57,6 @@ static func update(race: Node3D, dt: float) -> void:
 			car.lane=car.driver.home
 			car.driver.origin=car.lane; car.driver.target=car.lane
 			car.driver.signal=0; car.driver.changing=false; car.driver.progress=0
-		if absf(car.s-race.player.distance)<car.half_length+.8 and absf(car.lane-race.player.lane)<1.34 and race.player.invulnerable<=0 and race.player.crash_timer<=0:
-			var overlap = 1.0-absf(car.lane-race.player.lane)/1.34
-			var severity = race.player.collision_severity(absf(race.player.speed-car.speed),overlap)
-			var side = signf(race.player.lane-car.lane)
-			if side == 0: side = 1
-			race.player.apply_lateral_impulse(side*(1+severity*3))
-			race.player.damage(6+severity*20,18+severity*110,true)
-			race.player.speed *= 1-severity*.65
-			race.player.apply_lateral_impulse(signf(race.player.lane-car.lane)*2)
-			race.feedback(severity>.65,race.player_mesh.global_position)
-			race.notify(("迎头碰撞！" if car.speed<0 else "追尾撞击！") if overlap>.55 else "侧面擦碰 · 稳住车身")
 	for hazard in race.world.hazards:
 		if not hazard.hit and absf(hazard.s-race.player.distance)<.9 and absf(hazard.lane-race.player.lane)<.7:
 			hazard.hit = true
@@ -81,6 +79,7 @@ static func update_police(race: Node3D,dt: float) -> void:
 	race.police.warning = maxf(0,race.police.warning-dt)
 	var gap = race.player.distance-race.police.s
 	var cop_speed = clampf(43+gap*.13,28,59)
+	race.police.speed=cop_speed
 	race.police.s += cop_speed*dt
 	race.police.lane = move_toward(race.police.lane,race.player.lane,dt*1.15)
 	if gap>180:
@@ -107,7 +106,8 @@ static func update_police(race: Node3D,dt: float) -> void:
 	if race.police.support_active:
 		var support_gap: float=race.player.distance-race.police.support_s
 		race.police.support_warning=maxf(0,race.police.support_warning-dt)
-		race.police.support_s+=clampf(54+support_gap*.09,30,61)*dt
+		race.police.support_speed=clampf(54+support_gap*.09,30,61)
+		race.police.support_s+=race.police.support_speed*dt
 		var flank=clampf(race.player.lane+(-2.1 if race.player.lane>0 else 2.1),-5.5,5.5)
 		race.police.support_lane=move_toward(race.police.support_lane,flank,dt*.85)
 		if support_gap>190: race.police.support_active=false

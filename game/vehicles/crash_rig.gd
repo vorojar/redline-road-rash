@@ -10,7 +10,7 @@ func body_at(key: String, a: Vector3, b: Vector3, radius: float, mass_value: flo
 	var body = RigidBody3D.new()
 	body.mass = mass_value
 	body.collision_layer = 4
-	body.collision_mask = 1
+	body.collision_mask = 1 | 2 | 8
 	body.continuous_cd = true
 	body.linear_damp = .8
 	body.angular_damp = 2.3

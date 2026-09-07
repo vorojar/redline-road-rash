@@ -11,14 +11,21 @@ func check(value: bool,label: String):
 		printerr("FAIL: "+label)
 func _initialize(): call_deferred("run")
 func run():
-	for direction in [-1,1]:
-		var bike=Bike.new()
-		bike.lane=0
-		bike.speed=53
-		bike.curve_force=.017*direction
-		for i in range(15): bike.drive(1.0/60,1,0,0,false)
-		check(absf(bike.lane)<.001 and absf(bike.heading_offset)<.001,"松开方向自动沿弯道保持车道")
-		check(bike.lean*direction>.1,"没有转向输入也会随道路压弯")
+	for hz in [30,60,120]:
+		for direction in [-1,1]:
+			var free=Bike.new()
+			free.lane=0; free.speed=45; free.curve_force=.017*direction
+			for i in range(hz/2): free.drive(1.0/hz,1,0,0,false)
+			check(free.lane*direction>2 and free.heading_offset*direction<-.25,"%d Hz 不转向会驶向弯外，不自动随弯" % hz)
+			check(absf(free.lean)<.01,"不输入时车身不凭道路曲率自动压弯")
+			var held=Bike.new()
+			held.lane=0; held.speed=45; held.curve_force=.017*direction
+			for i in range(hz*4): held.drive(1.0/hz,1,0,-direction,false)
+			check(absf(held.lane)<1 and absf(held.heading_offset)<.03 and held.crashes==0,"%d Hz 按对方向持续四秒不会过转" % hz)
+			check(held.lean*direction>.1,"主动转向才产生压弯")
+			var before=held.lane
+			for i in range(hz/2): held.drive(1.0/hz,1,0,0,false)
+			check((held.lane-before)*direction>1.5,"松开方向后不继续自动替玩家转弯")
 	var straight=Bike.new()
 	straight.speed=40
 	for i in range(12): straight.drive(1.0/60,1,0,.25,false)
@@ -43,11 +50,11 @@ func run():
 				free.speed=45
 				free.assist=assisted
 				var initial_heading=route.yaw(start)
-				for frame in range(120):
+				for frame in range(20):
 					free.curve_force=route.curvature(free.distance)
 					free.drive(1.0/60,1,0,0,false)
-				var heading_change=absf(wrapf(route.yaw(free.distance)-initial_heading,-PI,PI))
-				check(heading_change>.05 and absf(free.heading_offset)<.001 and absf(free.lane)<.001,track+" 车头自动跟随真实弯道且车道不漂移，辅助 %s" % assisted)
+				var world_heading=wrapf(route.yaw(free.distance)+free.heading_offset-initial_heading,-PI,PI)
+				check(absf(world_heading)<.04 and absf(free.lane)>.5,track+" 无输入保持世界朝向，辅助 %s" % assisted)
 		route.free()
 	var pushed=Bike.new()
 	pushed.speed=40

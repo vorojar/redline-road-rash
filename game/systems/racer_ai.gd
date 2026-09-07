@@ -205,10 +205,6 @@ static func update(race: Node3D, dt: float) -> void:
 			r.windup = Combat.WINDUPS[r.kind]
 			if r.combat_target==-1 and r.stealing: race.notify(r.name+" 伸手夺械！格挡或闪避",1.0)
 			elif r.combat_target==-1: race.notify(r.name+[" 挥拳"," 抬腿"," 举起"+Combat.WEAPONS[r.weapon].name][r.kind]+"！U 格挡 / I 闪避",1.0)
-		for car in race.traffic:
-			if absf(r.s-car.s)<car.half_length+.7 and absf(r.lane-car.lane)<1.15:
-				race.knock_out(i,r.last_hit_age<4.0)
-				break
 		if absf(r.lane)>7.9:
 			race.knock_out(i,r.last_hit_age<4)
 		if r.s>=race.track.length:

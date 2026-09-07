@@ -25,6 +25,8 @@ run_checked work/verify-experience.log --headless --path "$ROOT" --script res://
 cat work/verify-experience.log
 run_checked work/verify-steering-comfort.log --headless --path "$ROOT" --script res://tests/steering_comfort.gd
 cat work/verify-steering-comfort.log
+run_checked work/verify-contacts.log --headless --path "$ROOT" --script res://tests/vehicle_contacts.gd
+cat work/verify-contacts.log
 run_checked work/verify-road-follow.log --headless --path "$ROOT" --script res://tests/road_follow.gd
 cat work/verify-road-follow.log
 run_checked work/verify-arcade-cornering.log --headless --path "$ROOT" --script res://tests/arcade_cornering.gd

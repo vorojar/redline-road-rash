@@ -15,6 +15,8 @@ var lateral_velocity: float = 0.0
 var heading_offset: float = 0.0
 var steering_rate: float = 0.0
 var lateral_impulse: float = 0.0
+var bend_direction: float = 0.0
+var bend_lane: float = 0.0
 var crash_timer: float = 0.0
 var invulnerable: float = 0.0
 var cooldown: float = 0.0
@@ -86,6 +88,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 			heading_offset = 0
 			steering_rate = 0
 			lateral_impulse = 0
+			bend_direction = 0
 		return
 	var motor = condition_power()
 	var cap = corner_speed(curve_force,top_speed*motor+(12 if boost else 0),handling)
@@ -95,7 +98,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	else:
 		speed = maxf(0,speed+minf(target_accel,0)*dt)
 		speed = move_toward(speed,cap,dt*12)
-	# Road following supplies the bend; steering creates a temporary lane-change angle.
+	# Straight-road input remains a gentle, self-centering lane change.
 	var shaped_steer = signf(steer)*pow(absf(steer),STEERING_EXPONENT)
 	var desired_rate = -shaped_steer*turn_rate()
 	# Build steering gently, but remove it promptly when releasing or countersteering.
@@ -105,7 +108,20 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 		steering_rate = move_toward(steering_rate,desired_rate,dt*(30 if absf(desired_rate)<absf(steering_rate) else 10))
 	var forward_speed = speed*maxf(0,cos(heading_offset))/maxf(.35,1+curve_force*lane)
 	var advance = forward_speed*dt
-	var relative_turn_rate = steering_rate-heading_offset*HEADING_RETURN
+	var road_turn_rate = curve_force*forward_speed
+	var bend_weight = smoothstep(.00015,.0015,absf(curve_force))
+	var turning_into_bend = steer*curve_force<0 and absf(steer)>.1 and bend_weight>0
+	var relative_turn_rate = steering_rate-heading_offset*HEADING_RETURN*(1-bend_weight)-road_turn_rate*bend_weight
+	if turning_into_bend:
+		if bend_direction!=signf(curve_force):
+			bend_direction=signf(curve_force)
+			bend_lane=lane
+		# One bounded inward adjustment per press, never an accumulating turn angle.
+		var target_lane = bend_lane+steer*.6
+		var target_heading = clampf((lane-target_lane)*.10,-.10,.10)
+		relative_turn_rate = lerpf(relative_turn_rate,(target_heading-heading_offset)*HEADING_RETURN,bend_weight)
+	else:
+		bend_direction=0
 	var heading_change = relative_turn_rate*dt
 	var midpoint_heading = heading_offset+heading_change*.5
 	lateral_velocity = -sin(midpoint_heading)*speed+lateral_impulse
