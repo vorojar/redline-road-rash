@@ -8,7 +8,7 @@ var owned: Array = ["ratchet"]
 var selected: String = "ratchet"
 var unlocked: Array = ["pine"]
 var records: Dictionary = {}
-var settings: Dictionary = {"volume": 0.7, "music": 0.65, "shake": 0.6, "difficulty": 1, "assist": false, "large_hud": false, "bindings": {}, "control_mode": 0, "touch_left_handed": false}
+var settings: Dictionary = {"volume": 0.7, "music": 0.65, "shake": 0.6, "difficulty": 1, "assist": false, "large_hud": false, "bindings": {}, "control_mode": 0, "touch_left_handed": false, "render_quality": 1}
 var load_error: String = ""
 
 func load_profile() -> void:
@@ -51,6 +51,7 @@ func load_profile() -> void:
 	settings.music = clampf(settings.music, 0, 1)
 	settings.shake = clampf(settings.shake, 0, 1)
 	settings.control_mode = clampi(int(settings.control_mode), 0, 2)
+	settings.render_quality = clampi(int(settings.render_quality), 0, 2)
 	settings.difficulty = clampi(int(settings.difficulty), 0, 2)
 
 func save_profile() -> bool:

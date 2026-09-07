@@ -1,4 +1,4 @@
-"""Generate original, editable motorcycle and articulated rider assets with Blender."""
+"""Generate editable motorcycles and invoke the CC0-based anatomical rider builder."""
 import bpy, math, os, sys
 from mathutils import Vector
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -8,11 +8,26 @@ def mat(name, color, metallic=0, rough=.5):
  m=bpy.data.materials.new(name); m.diffuse_color=(*color,1); m.use_nodes=True
  bs=m.node_tree.nodes.get('Principled BSDF'); bs.inputs['Base Color'].default_value=(*color,1); bs.inputs['Metallic'].default_value=metallic; bs.inputs['Roughness'].default_value=rough
  return m
-paint=mat('Paint',(.30,.025,.017),.65,.28); black=mat('Rubber',(.016,.019,.021),0,.85); steel=mat('Brushed steel',(.34,.38,.4),.88,.28); dark=mat('Engine',(.055,.061,.07),.8,.45); chrome=mat('Chrome',(.68,.73,.76),.96,.19); seat=mat('Seat leather',(.023,.021,.02),0,.78); red=mat('Tail lamp',(.6,.009,.005),.2,.2); amber=mat('Indicator',(.88,.25,.01),.2,.24); glass=mat('Glass',(.045,.09,.11),.5,.15); light=mat('Headlight',(.82,.8,.65),.3,.18)
+def mapped(name, atlas, rough, metallic=0):
+ m=mat(name,(1,1,1),metallic,rough);nodes=m.node_tree.nodes;links=m.node_tree.links;bs=nodes.get('Principled BSDF')
+ for suffix, socket in [('albedo','Base Color'),('roughness','Roughness'),('normal','Normal')]:
+  tex=nodes.new('ShaderNodeTexImage');tex.image=bpy.data.images.load(os.path.join(ROOT,'assets/textures/vehicles',atlas+'_'+suffix+'.png'));tex.image.pack()
+  if suffix!='albedo':tex.image.colorspace_settings.name='Non-Color'
+  if suffix=='normal':
+   normal=nodes.new('ShaderNodeNormalMap');links.new(tex.outputs['Color'],normal.inputs['Color']);links.new(normal.outputs['Normal'],bs.inputs[socket])
+  else:links.new(tex.outputs['Color'],bs.inputs[socket])
+ return m
+paint=mapped('Paint','bike_livery',.28,.55); black=mat('Rubber',(.016,.019,.021),0,.85); steel=mat('Brushed steel',(.19,.22,.25),.82,.34); dark=mat('Engine',(.055,.061,.07),.8,.45); chrome=mat('Chrome',(.68,.73,.76),.96,.19); seat=mat('Seat leather',(.023,.021,.02),0,.78); red=mat('Tail lamp',(.6,.009,.005),.2,.2); amber=mat('Indicator',(.88,.25,.01),.2,.24); glass=mat('Glass',(.045,.09,.11),.5,.15); light=mat('Headlight',(.82,.8,.65),.3,.18)
 
 def finish(obj,name,material):
  obj.name=name; obj.data.materials.append(material)
  for p in obj.data.polygons: p.use_smooth=True
+ if material==paint:
+  obj.data.update();uv=obj.data.uv_layers.active or obj.data.uv_layers.new(name='UVMap')
+  for p in obj.data.polygons:
+   for idx in p.loop_indices:
+    v=obj.matrix_world@obj.data.vertices[obj.data.loops[idx].vertex_index].co
+    uv.data[idx].uv=(((1.15-v.y) if p.normal.x<0 else (v.y+1.15))/2.3*.5+(.5 if p.normal.x<0 else 0),(v.z-.20)/1.05)
  return obj
 
 def sphere(name,loc,scale,material):
@@ -29,6 +44,25 @@ def tube(name,a,b,r,material,vertices=16):
 
 def torus(name,loc,major,minor,material,rot=(0,math.pi/2,0)):
  bpy.ops.mesh.primitive_torus_add(major_radius=major,minor_radius=minor,major_segments=48,minor_segments=12,location=loc,rotation=rot);return finish(bpy.context.object,name,material)
+def body_form(name,rings,material):
+ verts=[];faces=[];n=32
+ for y,rx,rz,cz in rings:
+  for i in range(n):
+   a=i*math.tau/n
+   # A broad crown and tucked lower edge form stamped bodywork rather than a ball.
+   verts.append((rx*math.cos(a),y,cz+rz*math.sin(a)))
+ for j in range(len(rings)-1):
+  for i in range(n):
+   k=j*n+i;faces.append((k,j*n+(i+1)%n,(j+1)*n+(i+1)%n,k+n))
+ faces.extend([tuple(reversed(range(n))),tuple((len(rings)-1)*n+i for i in range(n))])
+ mesh=bpy.data.meshes.new(name);mesh.from_pydata(verts,[],faces);mesh.update()
+ obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj)
+ # Ring order is along +Y, so reverse outward winding from the XY loft convention.
+ for p in mesh.polygons:p.flip()
+ bpy.ops.object.select_all(action='DESELECT');obj.select_set(True);bpy.context.view_layer.objects.active=obj
+ sub=obj.modifiers.new('Sculpted bodywork','SUBSURF');sub.levels=1;bpy.ops.object.modifier_apply(modifier=sub.name)
+ return finish(obj,name,material)
+
 if '--rider-only' not in sys.argv:
  # Blender +Y is forward, Z up. glTF conversion produces Godot -Z forward.
  for y in [-.79,.79]:
@@ -61,9 +95,9 @@ if '--rider-only' not in sys.argv:
    torus('Shock coil',(x,-.56+k*.013,.43+k*.025),.038,.007,dark,rot=(.45,0,0))
   tube('Fork lower',(x,.79,.34),(x,.7,.7),.027,chrome)
   tube('Fork upper',(x,.7,.7),(x,.57,1.08),.035,steel)
- sphere('Sculpted fuel tank',(0,.12,.87),(.27,.43,.22),paint)
+ body_form('Sculpted fuel tank',[(-.29,.11,.075,.875),(-.20,.205,.13,.89),(-.04,.268,.16,.90),(.17,.258,.157,.90),(.36,.191,.12,.90),(.48,.077,.048,.91)],paint)
  cube('Seat',(0,-.37,.84),(.38,.63,.10),seat,.05)
- sphere('Rear cowl',(0,-.70,.78),(.24,.23,.12),paint)
+ body_form('Rear cowl',[(-.97,.05,.025,.81),(-.87,.147,.065,.81),(-.66,.202,.070,.81),(-.50,.176,.045,.82)],paint)
  sphere('Front fender',(0,.79,.61),(.115,.36,.08),paint)
  cube('Crankcase',(0,-.02,.46),(.4,.38,.28),dark,.09)
  for y in [-.14,.04,.19]:
@@ -105,128 +139,5 @@ if '--rider-only' not in sys.argv:
    bpy.context.view_layer.objects.active=objs[0];bpy.ops.object.join();objs[0].name=material.name
  bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT,'assets/models/source/motorcycle.blend'))
  bpy.ops.export_scene.gltf(filepath=os.path.join(ROOT,'assets/models/motorcycle.glb'),export_format='GLB')
-# Articulated rider, all limbs weighted to named bones. Standing rest pose.
-bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
-leather=mat('Jacket leather',(.038,.033,.03),.05,.68);denim=mat('Worn denim',(.09,.13,.18),0,.87);trim=mat('Jacket seam',(.18,.15,.11),0,.8);helm=mat('Helmet',(.56,.53,.46),.25,.28)
-bones={'hips':((0,0,.93),(0,0,1.08)), 'spine':((0,0,1.06),(0,0,1.52)), 'head':((0,0,1.54),(0,0,1.91))}
-for side,x in [('L',-.26),('R',.26)]:
- bones['upper_arm_'+side]=((x,0,1.47),(x*1.14,0,1.16));bones['forearm_'+side]=((x*1.14,0,1.16),(x*1.2,0,.88));bones['thigh_'+side]=((x*.5,0,.98),(x*.54,0,.55));bones['shin_'+side]=((x*.54,0,.55),(x*.56,0,.13))
-bpy.ops.object.armature_add();rig=bpy.context.object;rig.name='RiderRig';bpy.ops.object.mode_set(mode='EDIT');rig.data.edit_bones.remove(rig.data.edit_bones[0]);root=rig.data.edit_bones.new('root');root.head=(0,0,0);root.tail=(0,0,.2)
-for name,(a,b) in bones.items():
- eb=rig.data.edit_bones.new(name);eb.head=a;eb.tail=b;eb.parent=root
-bpy.ops.object.mode_set(mode='OBJECT')
-def bind(o,bone):
- vg=o.vertex_groups.new(name=bone);vg.add(list(range(len(o.data.vertices))),1,'REPLACE');mod=o.modifiers.new('Rig deformation','ARMATURE');mod.object=rig;o.parent=rig
-def torso_mesh():
- rings=[(1.045,.165,.10),(1.10,.18,.115),(1.20,.19,.132),(1.32,.218,.145),(1.43,.243,.139),(1.49,.242,.115),(1.53,.19,.097),(1.565,.077,.071)]
- verts=[];faces=[];n=32
- for z,xr,yr in rings:
-  for i in range(n):
-   a=i*math.tau/n
-   verts.append((xr*math.cos(a),yr*math.sin(a),z))
- for j in range(len(rings)-1):
-  for i in range(n):faces.append((j*n+i,j*n+(i+1)%n,(j+1)*n+(i+1)%n,(j+1)*n+i))
- faces.extend([tuple(reversed(range(n))),tuple((len(rings)-1)*n+i for i in range(n))])
- mesh=bpy.data.meshes.new('Tailored leather jacket');mesh.from_pydata(verts,[],faces);mesh.update()
- obj=bpy.data.objects.new('Jacket torso',mesh);bpy.context.collection.objects.link(obj);finish(obj,'Jacket torso',leather)
- mod=obj.modifiers.new('Tailored smoothing','SUBSURF');mod.levels=1;bpy.context.view_layer.objects.active=obj;obj.select_set(True);bpy.ops.object.modifier_apply(modifier=mod.name)
- return obj
-bind(cube('Pelvis',(0,0,.985),(.34,.225,.22),denim,.07),'hips')
-bind(torso_mesh(),'spine')
-# Seams and a restrained back patch rather than a toy-colored body.
-bind(cube('Back panel',(0,-.139,1.36),(.21,.01,.07),leather,.01),'spine')
-for z in [1.09,1.13]:bind(tube('Waist stitching',(-.16,-.096,z),(.16,-.096,z),.003,trim),'spine')
-for x in [-.082,.082]:bind(cube('Back pocket',(x,-.114,.99),(.11,.008,.09),denim,.01),'hips')
-for x in [-.21,.21]:bind(tube('Back seam',(x,-.08,1.10),(x,-.095,1.49),.005,trim),'spine')
-bind(sphere('Neck',(0,0,1.59),(.075,.076,.11),leather),'head')
-bind(sphere('Helmet shell',(0,.008,1.765),(.145,.177,.168),helm),'head')
-bind(sphere('Dark visor',(0,.140,1.785),(.137,.065,.071),glass),'head')
-bind(sphere('Chin guard',(0,.103,1.668),(.132,.129,.055),helm),'head')
-def tailored_limb(name,a,b,radius,material):
- # Vary cross-section along the limb; asymmetrical folds avoid capsule joints.
- direction=(b-a).normalized();basis=direction.to_track_quat('Z','Y')
- profile=[(-.04,.78),(.02,.97),(.17,1.03),(.33,.96),(.50,.90),(.63,.93),(.74,.83),(.85,.88),(.97,.69),(1.04,.57)]
- verts=[];faces=[];n=24
- for j,(t,width) in enumerate(profile):
-  for k in range(n):
-   angle=k*math.tau/n
-   fold=1+.035*math.sin(angle*3+j*1.9)
-   v=Vector((radius*width*math.cos(angle)*fold,radius*.86*width*math.sin(angle)*fold,t*(b-a).length))
-   verts.append(tuple(a+basis@v))
- for j in range(len(profile)-1):
-  for k in range(n):faces.append((j*n+k,j*n+(k+1)%n,(j+1)*n+(k+1)%n,(j+1)*n+k))
- faces.extend([tuple(reversed(range(n))),tuple((len(profile)-1)*n+k for k in range(n))])
- mesh=bpy.data.meshes.new(name);mesh.from_pydata(verts,[],faces);mesh.update()
- o=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(o);finish(o,name,material)
- return o
-for side in ['L','R']:
- for part,radius,material in [('upper_arm',.095,leather),('forearm',.079,leather),('thigh',.115,denim),('shin',.089,denim)]:
-  name=part+'_'+side;a,b=map(Vector,bones[name]);bind(tailored_limb(name,a,b,radius,material),name)
-  for f in [.75,.85]:
-   pos=a.lerp(b,f);bind(tube('Garment fold',pos+Vector((-.04,-radius*.83,.006)),pos+Vector((.04,-radius*.83,-.006)),.003,material,8),name)
-  if part=='forearm':
-   bind(cube('Leather glove',b,(.12,.105,.13),black,.03),name)
-   for dx in [-.036,0,.036]:bind(cube('Knuckle pad',b+Vector((dx,.055,.02)),(.025,.018,.045),dark,.006),name)
-  if part=='shin':
-   bind(cube('Riding boot',(b.x,.062,.115),(.155,.29,.17),seat,.035),name)
-   bind(cube('Boot sole',(b.x,.066,.041),(.159,.30,.027),black,.009),name)
-   for z in [.125,.16]:bind(tube('Boot strap',(b.x-.07,.05,z),(b.x+.07,.05,z),.007,dark,8),name)
-  if part=='upper_arm':bind(sphere('Shoulder armor',a,(.095,.087,.065),leather),name)
-for x in [-.12,.12]:
- bind(tube('Jacket yoke',(x,-.135,1.41),(x*.6,-.117,1.49),.004,trim),'spine')
- bind(cube('Chest pocket',(x,.128,1.36),(.12,.012,.075),leather,.006),'spine')
-bind(tube('Jacket zipper',(0,.113,1.11),(0,.138,1.47),.0035,steel),'spine')
-for j in range(16):
- angle=-.8+j*.12
- a=(0,.005+math.sin(angle)*.163,1.765+math.cos(angle)*.168)
- b=(0,.005+math.sin(angle+.12)*.163,1.765+math.cos(angle+.12)*.168)
- bind(tube('Helmet stripe',a,b,.009,trim,8),'head')
-# Protective riding gear: articulated panels, helmet trim/vents, fingers and boot hardware.
-for side in [-1,1]:
- suffix='L' if side<0 else 'R'
- bind(sphere('Helmet cheek', (side*.116,.074,1.712),(.027,.093,.067),helm),'head')
- bind(cube('Helmet brow vent',(side*.054,.153,1.866),(.045,.016,.012),black,.004),'head')
- bind(cube('Chin air intake',(side*.04,.222,1.678),(.052,.01,.017),black,.004),'head')
- bind(tube('Visor hinge',(side*.137,.048,1.786),(side*.146,.048,1.786),.018,steel),'head')
- bind(tube('Helmet lower trim',(side*.126,.03,1.645),(side*.093,.18,1.655),.009,black),'head')
- bind(cube('Jacket reflective shoulder',(side*.205,-.112,1.461),(.069,.01,.025),steel,.008),'spine')
- bind(cube('Elbow armor',(side*.292,-.063,1.195),(.098,.035,.105),dark,.028),'upper_arm_'+suffix)
- bind(cube('Knee protector',(side*.14,.076,.566),(.131,.036,.135),dark,.034),'thigh_'+suffix)
- bind(cube('Boot ankle armor',(side*.216,.014,.167),(.022,.091,.087),dark,.015),'shin_'+suffix)
- wrist=Vector(bones['forearm_'+suffix][1])
- for digit in range(4):
-  x=wrist.x+(digit-1.5)*.026
-  bind(tube('Glove finger',(x,wrist.y+.017,wrist.z-.014),(x,wrist.y+.053,wrist.z-.079),.012,black,12),'forearm_'+suffix)
-  bind(tube('Finger seam',(x,wrist.y+.039,wrist.z-.036),(x,wrist.y+.049,wrist.z-.061),.0025,trim,8),'forearm_'+suffix)
- bind(tube('Glove thumb',(wrist.x-side*.049,.025,wrist.z+.026),(wrist.x-side*.074,.056,wrist.z-.015),.019,black),'forearm_'+suffix)
-# Subtle back protector follows torso; segmented shape avoids a featureless mannequin back.
-for j in range(6):
- bind(cube('Back protector lamella',(0,-.145,1.19+j*.039),(.113+math.sin(j/5*math.pi)*.045,.026,.034),leather,.012),'spine')
-bind(tube('Collar seal',(-.07,0,1.569),(.07,0,1.569),.032,seat),'spine')
-# Blend garment end rings across shoulder/elbow/knee seams while keeping rigid armor separate.
-for o in list(bpy.context.scene.objects):
- if o.type!='MESH':continue
- bone_name=o.name
- if bone_name not in bones:continue
- side=bone_name[-1:]
- neighbor=('spine' if bone_name.startswith('upper_arm_') else 'upper_arm_'+side if bone_name.startswith('forearm_') else 'hips' if bone_name.startswith('thigh_') else 'thigh_'+side)
- a,b=map(Vector,bones[bone_name]);axis=(b-a).normalized();length=(b-a).length
- vg=o.vertex_groups.get(bone_name);adj=o.vertex_groups.new(name=neighbor)
- for vertex in o.data.vertices:
-  t=(vertex.co-a).dot(axis)/length
-  blend=max(0,min(.28,(.13-t)*1.9))
-  if blend>0:
-   vg.add([vertex.index],1-blend,'REPLACE');adj.add([vertex.index],blend,'REPLACE')
-# Batch skinned clothing by material; vertex groups preserve the independent bone weights.
-for material in [leather,denim,trim,helm,black,steel,dark,seat,glass]:
- objects=[o for o in bpy.context.scene.objects if o.type=='MESH' and o.active_material==material]
- if not objects:continue
- bpy.ops.object.select_all(action='DESELECT')
- for o in objects:o.select_set(True)
- bpy.context.view_layer.objects.active=objects[0]
- bpy.ops.object.join()
- objects[0].name='Rider '+material.name
-# Export bones without animation; Godot drives poses continuously for combat and recovery.
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT,'assets/models/source/rider.blend'))
-bpy.ops.export_scene.gltf(filepath=os.path.join(ROOT,'assets/models/rider.glb'),export_format='GLB',export_animations=False)
-print('Original motorcycle and rigged rider generated.')
+# Keep the rider generator independently reproducible.
+exec(compile(open(os.path.join(ROOT,'scripts/build_rider.py')).read(),os.path.join(ROOT,'scripts/build_rider.py'),'exec'))

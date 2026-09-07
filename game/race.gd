@@ -20,6 +20,8 @@ const HUD = preload("res://game/hud.gd")
 var endurance = Endurance.new()
 var finish_presentation = FinishPresentation.new()
 var touch = TouchControls.new()
+const RenderQuality = preload("res://game/systems/render_quality.gd")
+var sun: DirectionalLight3D
 var touch_device: bool = false
 var primary_punch: bool = true
 var web_suspend_callback
@@ -87,12 +89,10 @@ func _ready() -> void:
 		web_suspend_callback = JavaScriptBridge.create_callback(func(_args): suspend_input())
 		JavaScriptBridge.get_interface("window").redlineSuspend = web_suspend_callback
 	touch.enabled = touch_device if career.settings.control_mode == 0 else career.settings.control_mode == 1
-	if touch_device:
-		get_viewport().scaling_3d_scale = .75
-		get_viewport().msaa_3d = Viewport.MSAA_DISABLED
 	Controls.setup(career.settings.bindings)
 	track = career.catalog.tracks[0]
 	build_environment()
+	apply_render_quality()
 	route = Route.new()
 	add_child(route)
 	world = RoadBuilder.new()
@@ -133,19 +133,23 @@ func build_environment() -> void:
 	env.environment.sky = sky
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.environment.ambient_light_color = Color("afbbbf")
-	env.environment.ambient_light_energy = .42
+	env.environment.ambient_light_energy = .36
 	env.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.environment.fog_enabled = true
 	env.environment.fog_light_color = Color("a2adb0")
-	env.environment.fog_density = .0014
+	env.environment.fog_density = .0007
 	add_child(env)
-	var sun = DirectionalLight3D.new()
+	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-42,-48,0)
 	sun.light_color = Color("fff1db")
-	sun.light_energy = .72
-	sun.shadow_enabled = not touch_device
-	sun.directional_shadow_max_distance = 100
+	sun.light_energy = .95
 	add_child(sun)
+
+func apply_render_quality() -> void:
+	RenderQuality.apply(get_viewport(),career.settings.render_quality)
+	RenderQuality.apply_sun(sun,career.settings.render_quality,touch_device)
+	if is_instance_valid(hud) and is_instance_valid(hud.garage_view):
+		hud.garage_view.apply_render_quality()
 
 func difficulty() -> Dictionary:
 	return career.catalog.difficulties[clampi(int(career.settings.difficulty),0,2)]

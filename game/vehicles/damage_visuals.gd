@@ -4,15 +4,22 @@ var paints: Array[ShaderMaterial] = []
 var smoke: CPUParticles3D
 var condition: float = 1
 
+static func paint_material(source: StandardMaterial3D, color: Color) -> ShaderMaterial:
+	var mat = ShaderMaterial.new()
+	mat.shader = SHADER
+	mat.set_shader_parameter("tint",color)
+	mat.set_shader_parameter("has_maps",source.albedo_texture != null)
+	mat.set_shader_parameter("color_map",source.albedo_texture)
+	mat.set_shader_parameter("normal_map",source.normal_texture)
+	mat.set_shader_parameter("roughness_map",source.roughness_texture)
+	mat.set_shader_parameter("roughness_channel",source.roughness_texture_channel)
+	return mat
+
 func attach(actor: Node3D) -> void:
 	paints.clear()
 	for mesh in actor.bike.find_children("*","MeshInstance3D",true,false):
 		if mesh.name=="Paint":
-			var source=mesh.get_active_material(0)
-			var mat=ShaderMaterial.new()
-			mat.shader=SHADER
-			mat.set_shader_parameter("tint",source.albedo_color)
-			mesh.material_override=mat
+			var mat: ShaderMaterial = mesh.material_override
 			paints.append(mat)
 	if not is_instance_valid(smoke):
 		smoke=CPUParticles3D.new()

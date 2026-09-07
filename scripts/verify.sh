@@ -15,6 +15,8 @@ run_checked() {
 run_checked work/verify-import.log --headless --path "$ROOT" --editor --import --quit
 run_checked work/verify-rules.log --headless --path "$ROOT" --script res://tests/test_race.gd
 cat work/verify-rules.log
+run_checked work/verify-quality.log --headless --path "$ROOT" --script res://tests/render_quality.gd
+cat work/verify-quality.log
 run_checked work/verify-core.log --headless --path "$ROOT" --script res://tests/core_v03.gd --fixed-fps 60
 cat work/verify-core.log
 run_checked work/verify-garage-burst.log --headless --path "$ROOT" --script res://tests/garage_burst.gd

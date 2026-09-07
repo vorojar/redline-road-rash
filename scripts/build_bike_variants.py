@@ -3,7 +3,7 @@ from pathlib import Path
 import bpy, math
 from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[1]
-exec((ROOT/'scripts/build_models.py').read_text().split('# Blender +Y')[0])
+exec((ROOT/'scripts/build_models.py').read_text().split("if '--rider-only'")[0])
 ROOT = Path(ROOT)
 
 def reset():
@@ -34,7 +34,7 @@ for obj in bpy.context.scene.objects:
    point.y*=1.18
    if point.z>1.02: point.z+=.12
    vertex.co=inverse@point
-sphere('Broad muscle tank',(0,.10,.88),(.305,.47,.215),paint)
+body_form('Broad muscle tank',[(-.35,.12,.055,.91),(-.22,.266,.15,.90),(0,.305,.18,.89),(.27,.28,.15,.90),(.49,.10,.055,.92)],paint)
 for side in [-1,1]:
  tube('Handle riser',(side*.10,.60,1.02),(side*.12,.60,1.20),.019,chrome)
  tube('Swept bar',(side*.12,.60,1.20),(side*.43,.50,1.21),.021,chrome)
@@ -71,7 +71,7 @@ for side in [-1,1]:
   vent.rotation_euler.x=.28
  tube('Frame spar',(side*.22,.41,.91),(side*.24,-.38,.56),.055,steel)
  cube('Tail fin',(side*.17,-.70,.89),(.15,.40,.10),paint,.045)
-cube('Aerodynamic nose',(0,.69,1.055),(.49,.36,.23),paint,.085)
+body_form('Aerodynamic nose',[(.47,.23,.092,1.04),(.62,.27,.12,1.04),(.78,.245,.092,1.035),(.91,.15,.032,1.024)],paint)
 # Projectors sit just in front of the painted nose.
 for side in [-1,1]:sphere('Projector glass',(side*.135,.883,1.055),(.086,.022,.047),light)
 vertices=[];faces=[]

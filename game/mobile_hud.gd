@@ -91,7 +91,7 @@ func draw_menu(h, height: float) -> void:
 		h.button(Rect2(28,332,430,64),"音乐：%d%%" % (settings.music*100),func(): settings.music=0.0 if settings.music>=.99 else minf(1,settings.music+.25); h.save_settings())
 		h.button(Rect2(490,104,434,64),"操作："+h.control_mode_label(),func(): h.cycle_control_mode())
 		h.button(Rect2(490,180,434,64),"转向区："+("右手" if settings.touch_left_handed else "左手"),func(): settings.touch_left_handed=not settings.touch_left_handed; race.clear_touch(); h.save_settings())
-		h.text("油门自动开启，按住刹车减速。",490,287,24,h.faded)
+		h.button(Rect2(490,256,434,64),"画质："+h.quality_label(),func(): h.cycle_quality())
 		h.button(Rect2(490,332,434,64),"保存并返回",func(): h.save_settings(); race.mode="ready",true)
 	if race.message_time>0:
 		h.panel(Rect2(190,84,580,52))

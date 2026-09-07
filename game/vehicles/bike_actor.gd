@@ -18,6 +18,7 @@ var grip_forward: float = .51
 var rider: Node3D
 var skeleton: Skeleton3D
 var bone_ids: Dictionary = {}
+var grip_axes: Dictionary = {}
 const LENGTHS = {"hips":.15,"spine":.46,"head":.37,"upper_arm":.312,"forearm":.281,"thigh":.43,"shin":.42}
 var bat: MeshInstance3D
 var front_probe: RayCast3D
@@ -68,6 +69,8 @@ func _ready() -> void:
 	style_rider(Color("242622"),Color("303735"))
 	for i in range(skeleton.get_bone_count()):
 		bone_ids[skeleton.get_bone_name(i).trim_suffix("_2")] = i
+	for suffix in ["L","R"]:
+		grip_axes[suffix] = rider.find_child("GripAxis_"+suffix,true,false).position.normalized()
 	bat = V.cylinder(self,.03,.85,Vector3.ZERO,Color("745039"))
 	V.cylinder(bat,.027,.18,Vector3(0,-.31,0),Color("262523"))
 	bat.visible = false
@@ -85,19 +88,24 @@ func _ready() -> void:
 
 func style_rider(jacket: Color, helmet: Color) -> void:
 	for mesh in rider.find_children("*","MeshInstance3D",true,false):
-		var source: Material = mesh.mesh.surface_get_material(0)
-		var material_name: String = source.resource_name
-		var material = ShaderMaterial.new()
-		material.shader = preload("res://game/vehicles/worn_surface.gdshader")
-		var color: Color = source.albedo_color
-		if material_name == "Jacket leather": color = jacket
-		if material_name == "Helmet": color = helmet
-		if material_name == "Worn denim": color = Color("252f36")
-		if material_name == "Jacket seam": color = Color("484438")
-		material.set_shader_parameter("tint",color)
-		material.set_shader_parameter("metal",source.metallic)
-		material.set_shader_parameter("rough",source.roughness)
-		mesh.material_override = material
+		mesh.material_override = null
+		for surface in range(mesh.mesh.get_surface_count()):
+			var source: Material = mesh.mesh.surface_get_material(surface)
+			var material_name: String = source.resource_name
+			if not source is StandardMaterial3D or source.albedo_texture == null:
+				mesh.set_surface_override_material(surface,source.duplicate())
+				continue
+			var material = ShaderMaterial.new()
+			material.shader = preload("res://game/vehicles/worn_surface.gdshader")
+			var color = jacket
+			if material_name == "Helmet": color = helmet
+			material.set_shader_parameter("tint",color)
+			material.set_shader_parameter("color_map",source.albedo_texture)
+			material.set_shader_parameter("normal_map",source.normal_texture)
+			material.set_shader_parameter("roughness_map",source.roughness_texture)
+			material.set_shader_parameter("roughness_channel",source.roughness_texture_channel)
+			material.set_shader_parameter("metal",source.metallic)
+			mesh.set_surface_override_material(surface,material)
 
 func set_model(spec: Dictionary) -> void:
 	sport_tuck = 1.0 if spec.id == "phantom" else (.15 if spec.id == "revenant" else .55)
@@ -119,9 +127,10 @@ func riding_grip(side: float) -> Vector3:
 func tint(color: Color) -> void:
 	for mesh in bike.find_children("*","MeshInstance3D",true,false):
 		if mesh.name == "Paint":
-			var m = mesh.mesh.surface_get_material(0).duplicate()
-			m.albedo_color = color
-			mesh.material_override = m
+			if mesh.material_override is ShaderMaterial:
+				mesh.material_override.set_shader_parameter("tint",color)
+			else:
+				mesh.material_override = damage_visuals.paint_material(mesh.mesh.surface_get_material(0),color)
 
 func ground_move(target: Vector3, yaw: float, dt: float) -> void:
 	if global_position.distance_to(target) > 20:
@@ -186,6 +195,14 @@ func bone(name: String, a: Vector3, b: Vector3, roll: float = 0) -> void:
 	skeleton.set_bone_pose_scale(index,Vector3(1,(b-a).length()/float(LENGTHS[length_key]),1))
 	skeleton.set_bone_pose_position(index,a)
 	skeleton.set_bone_pose_rotation(index,(Basis((b-a).normalized(),roll)*Basis(rotation_to)*rest.basis).get_rotation_quaternion())
+
+func hand_roll(suffix: String, elbow: Vector3, hand: Vector3, grip_axis: Vector3) -> float:
+	var axis = (hand-elbow).normalized()
+	var rest = skeleton.get_bone_global_rest(bone_ids["forearm_"+suffix])
+	var width: Vector3 = Quaternion(rest.basis.y.normalized(),axis)*grip_axes[suffix]
+	width = (width-axis*width.dot(axis)).normalized()
+	var target = (grip_axis-axis*grip_axis.dot(axis)).normalized()
+	return width.signed_angle_to(target,axis)
 
 func set_combat(weapon: int, guard: bool, dodge: float, charge: float) -> void:
 	held_weapon = weapon
@@ -282,7 +299,7 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 	bone("head",head_start,head_start+Vector3(0,.33,-.04))
 	for sign_value in [-1,1]:
 		var suffix = "L" if sign_value < 0 else "R"
-		var arm_start = shoulder+shoulder_basis*Vector3(sign_value*.23,-.025,0)
+		var arm_start = shoulder+shoulder_basis*Vector3(sign_value*.21,-.025,0)
 		var hand = riding_grip(sign_value)
 		var leg_start = hip+Vector3(sign_value*.14,0,0)
 		var ankle = Vector3(sign_value*.33,.40,.18)
@@ -325,7 +342,8 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 			bat.position = rider.transform*(hand+weapon_direction*.32)
 			bat.basis = rider.basis*Basis(Quaternion(Vector3.UP,weapon_direction))
 		bone("upper_arm_"+suffix,arm_start,elbow)
-		bone("forearm_"+suffix,elbow,hand)
+		var grip_axis = weapon_direction if held_weapon>0 and sign_value==1 else Vector3(-sign_value,0,0)
+		bone("forearm_"+suffix,elbow,hand,hand_roll(suffix,elbow,hand,grip_axis))
 		bone("thigh_"+suffix,leg_start,knee)
 		bone("shin_"+suffix,knee,ankle)
 
@@ -333,5 +351,5 @@ func riding_anchors(lean: float = 0) -> Array[Vector3]:
 	var tuck = smoothstep(8,55,ride_speed)*lerpf(.70,1.0,sport_tuck)
 	var hip = Vector3(-lean*.065,.965,.29+tuck*.045)
 	var shoulder = Vector3(-lean*.16,lerpf(1.36,1.17,tuck),lerpf(-.04,-.15,tuck))
-	var head = shoulder+Vector3(0,.035,-.11)
+	var head = shoulder+Vector3(0,-.005,-.065)
 	return [hip,shoulder,head]

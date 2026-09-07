@@ -1,6 +1,6 @@
 # Asset provenance
 
-- `models/motorcycle.glb`, `models/rider.glb`, `models/sedan.glb`: Original geometry authored for this project by `scripts/build_models.py` and `scripts/build_traffic.py` using Blender 4.4.3. Editable sources in `models/source`; no original Road Rash assets used.
+- `models/motorcycle.glb`, `models/sedan.glb`: Original geometry authored for this project by `scripts/build_models.py` and `scripts/build_traffic.py` using Blender 4.4.3. Editable sources in `models/source`; no original Road Rash assets used.
 - `textures/roadside_pine.png`: Generated with the built-in imagegen tool on 2026-09-06. Prompt: “Photorealistic natural vegetation billboard, one isolated mature California roadside pine tree, full tree from roots to top, centered on transparent background, 1024x1536, irregular dark olive needles, textured brown trunk, realistic silhouette gaps, overcast neutral light, no text or ground.”
 - `textures/asphalt/Asphalt010_*`: ambientCG Asphalt 010, CC0 1.0. Source: https://ambientcg.com/view?id=Asphalt010 ; download: https://ambientcg.com/get?file=Asphalt010_1K-JPG.zip
 - `textures/ground/Ground037_*`: ambientCG Ground 037, CC0 1.0. Source: https://ambientcg.com/view?id=Ground037 ; download: https://ambientcg.com/get?file=Ground037_1K-JPG.zip
@@ -26,3 +26,9 @@ Windows 中文字体：Google Fonts / Noto Sans SC，SIL Open Font License 1.1�
 Web 字体：`fonts/RedlineUI.ttf` 为 Noto Sans SC 的字形子集，由 `scripts/build_web_font.py` 生成，字体族名改为 Redline UI。保留现有字形轮廓、hinting、可变字重及排版特性；SIL OFL 1.1 许可证仍附 `NotoSansSC-OFL.txt`。完整原字体保留在源码中。
 
 触控图标：Lucide，ISC license；`ui/*.svg` 来自 https://github.com/lucide-icons/lucide/tree/94e4cb9d9db5907053ebf3636a97c45529cf776b/icons 。使用 hand-fist、shield、zap、pause、disc-3、hand-grab、move-horizontal；仅将固有尺寸设为 96px、描边设为白色供运行时着色。许可证附 `LUCIDE_LICENSE.txt`。
+
+
+骑手 / 车辆表面贴图：`textures/vehicles/*` 的 albedo、OpenGL normal 和 roughness 由 `scripts/build_surface_maps.py`（Pillow）原创绘制，使用项目自有 REDLINE / ROAD DIVISION 图案及号码。albedo alpha 为队伍换色遮罩，运行材质保持不透明。贴图内字形使用上述 SIL OFL Noto Sans SC；未使用参考照片、第三方车队涂装或游戏贴图。模型 UV、全盔外壳及车身曲面由 Blender 脚本制作；赛车服基于下述成熟人体网格适配，纹理嵌入 GLB。
+
+
+人体基础网格、成年体型形变及蒙皮权重：MakeHuman Community 核心资产，CC0 1.0。固定来源提交 `a8bc2d54ff0ac92e78ff71431b1023eda42bf482`，原始资产保存在 `models/source/makehuman/`，未引入 MakeHuman 应用程序代码。`scripts/build_human_body.py` 应用成年体型、保留连续人体拓扑，将权重映射到游戏骨骼，调整手指握姿并生成赛车服表面；头盔与护靴为本项目几何。资产来源：https://github.com/makehumancommunity/makehuman/tree/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data 。授权说明：https://static.makehumancommunity.org/about/license.html 。CC0 全文附 `MAKEHUMAN_CC0.txt`。

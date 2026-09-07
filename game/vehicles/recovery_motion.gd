@@ -78,7 +78,7 @@ func apply(actor: Node3D, t: float) -> void:
 		ankle.y += ground(actor,foot_world)-actor.rider.position.y
 		var leg = hip+Vector3(sign_value*.14,0,0)
 		var knee = bend(leg,ankle,.43,.42,Vector3(0,0,-1))
-		var arm = shoulder+Vector3(sign_value*.23,-.025,0)
+		var arm = shoulder+Vector3(sign_value*.21,-.025,0)
 		var swing_arm = sin(phase+(0 if sign_value<0 else PI))*.16 if walking else 0.0
 		var hand = arm+Vector3(sign_value*.025,-.49,-.10+swing_arm)
 		# Push off with one hand, then reach for the real handlebar before lifting.

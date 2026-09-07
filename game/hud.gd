@@ -117,6 +117,14 @@ func rebind(key: int) -> void:
 	waiting_action = ""
 	save_settings()
 
+func quality_label() -> String:
+	return race.RenderQuality.LABELS[race.career.settings.render_quality]
+
+func cycle_quality() -> void:
+	race.career.settings.render_quality = (race.career.settings.render_quality+1)%3
+	race.apply_render_quality()
+	save_settings()
+
 func save_settings() -> void:
 	if not race.test_mode and not race.career.save_profile():
 		race.notify("设置未能保存。",3)
@@ -278,9 +286,10 @@ func draw_settings() -> void:
 	button(Rect2(75,438,400,50),"路肩容错："+("开" if settings.assist else "关"),func(): settings.assist=not settings.assist; race.player.assist=settings.assist; save_settings())
 	button(Rect2(75,501,400,50),"大号速度读数："+("开" if settings.large_hud else "关"),func(): settings.large_hud=not settings.large_hud; save_settings())
 	button(Rect2(75,564,400,42),"音乐：%d%%" % (settings.music*100),func(): settings.music=0.0 if settings.music>=.99 else minf(1,settings.music+.25); save_settings())
-	text("手柄：RT 油门 / LT 刹车 / 左摇杆 转向",75,634,17,cream)
-	text("X 拳 / A 踢 / Y 武器 / B 格挡 / RB 蓄力",75,664,17,cream)
-	text("L3 闪避 / R3 夺械 / LB 定速 / Start 暂停",75,694,16,faded)
+	button(Rect2(75,617,400,42),"画质："+quality_label(),func(): cycle_quality())
+	text("手柄：RT 油门 / LT 刹车 / 左摇杆 转向",75,686,16,cream)
+	text("X 拳 / A 踢 / Y 武器 / B 格挡 / RB 蓄力",535,640,17,cream)
+	text("L3 闪避 / R3 夺械 / LB 定速 / Start 暂停",535,675,16,faded)
 	button(Rect2(75,710,620,60),"操作："+control_mode_label(),func(): cycle_control_mode())
 	text("Music: Umplix (CC0) · Engines: dklon (CC-BY-SA 3.0)",75,797,13,faded)
 	var actions = Controls.LABELS.keys()

@@ -18,7 +18,6 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
-	viewport.msaa_3d = Viewport.MSAA_DISABLED if get_parent().race.touch_device else Viewport.MSAA_4X
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	add_child(viewport)
 	scene = Node3D.new()
@@ -74,6 +73,13 @@ func _ready() -> void:
 	scene.add_child(camera)
 	camera.current = true
 	update_camera()
+	apply_render_quality()
+
+func apply_render_quality() -> void:
+	var level: int = get_parent().race.career.settings.render_quality
+	preload("res://game/systems/render_quality.gd").apply(viewport,level)
+	for light in scene.find_children("*","OmniLight3D",true,false):
+		light.shadow_enabled = light.position.x>0 and level>0
 
 func material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
 	var result = StandardMaterial3D.new()
@@ -89,9 +95,7 @@ func show_bike(spec: Dictionary) -> void:
 	pivot.add_child(displayed_model)
 	for mesh in displayed_model.find_children("*","MeshInstance3D",true,false):
 		if mesh.name == "Paint":
-			var paint = mesh.mesh.surface_get_material(0).duplicate()
-			paint.albedo_color = Color(spec.color)
-			mesh.material_override = paint
+			mesh.material_override = preload("res://game/vehicles/damage_visuals.gd").paint_material(mesh.mesh.surface_get_material(0),Color(spec.color))
 	reset_view()
 
 func reset_view() -> void:
