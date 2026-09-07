@@ -118,6 +118,12 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 			bend_lane=lane
 		# One bounded inward adjustment per press, never an accumulating turn angle.
 		var target_lane = bend_lane+steer*.6
+		# A press toward our carriageway must escape an oncoming lane or shoulder.
+		# Keep the destination fixed so holding through the bend cannot oversteer.
+		if steer>0 and bend_lane<0:
+			target_lane = maxf(target_lane,1.6)
+		elif steer<0 and bend_lane>6.5:
+			target_lane = minf(target_lane,4.7)
 		var target_heading = clampf((lane-target_lane)*.10,-.10,.10)
 		relative_turn_rate = lerpf(relative_turn_rate,(target_heading-heading_offset)*HEADING_RETURN,bend_weight)
 	else:

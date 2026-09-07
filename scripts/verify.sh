@@ -31,6 +31,8 @@ run_checked work/verify-contacts.log --headless --path "$ROOT" --script res://te
 cat work/verify-contacts.log
 run_checked work/verify-road-follow.log --headless --path "$ROOT" --script res://tests/road_follow.gd
 cat work/verify-road-follow.log
+run_checked work/verify-lane-recovery.log --headless --path "$ROOT" --script res://tests/lane_recovery.gd
+cat work/verify-lane-recovery.log
 run_checked work/verify-arcade-cornering.log --headless --path "$ROOT" --script res://tests/arcade_cornering.gd
 cat work/verify-arcade-cornering.log
 run_checked work/verify-duel.log --headless --path "$ROOT" --script res://tests/duel_pacing.gd
