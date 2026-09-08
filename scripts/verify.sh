@@ -22,6 +22,8 @@ run_checked work/verify-seated-pose.log --headless --path "$ROOT" --script res:/
 cat work/verify-seated-pose.log
 run_checked work/verify-street-bike.log --headless --path "$ROOT" --script res://tests/street_bike.gd
 cat work/verify-street-bike.log
+run_checked work/verify-traffic-pose.log --headless --path "$ROOT" --script res://tests/traffic_pose.gd
+cat work/verify-traffic-pose.log
 run_checked work/verify-world-visuals.log --headless --path "$ROOT" --script res://tests/world_visuals.gd
 cat work/verify-world-visuals.log
 run_checked work/verify-core.log --headless --path "$ROOT" --script res://tests/core_v03.gd --fixed-fps 60

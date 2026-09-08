@@ -638,7 +638,8 @@ func update_visuals(dt: float) -> void:
 		r.mesh.pose(elapsed,clampf(atan(route.curvature(r.s)*r.speed*r.speed/9.8)*.65,-.65,.65),route.slope(r.s),r.crash,r.attack_time,r.attack_side,r.kind,r.stagger,r.s)
 	for car in traffic:
 		car.mesh.position = route.point(car.s,car.lane)
-		car.mesh.rotation = Vector3(route.slope(car.s),route.yaw(car.s)+(PI if car.speed<0 else 0),0)
+		var direction: float = car.driver.direction if car.has("driver") else (-1.0 if car.speed<0 else 1.0)
+		car.mesh.rotation = Vector3(route.slope(car.s)*direction,route.yaw(car.s)+(PI if direction<0 else 0),0)
 	police.support_mesh.get_node("VehicleSolid").collision_layer=8 if police.active and police.support_active else 0
 	police.mesh.get_node("VehicleSolid").collision_layer=8 if police.active else 0
 	police.support_mesh.visible=police.active and police.support_active

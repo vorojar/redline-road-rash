@@ -38,11 +38,13 @@ func _physics_process(dt):
 		call_deferred("shutdown",0 if race.result=="FINISH" else 1)
 		return false
 	var player=race.player
+	# Match collision detection: the test driver must also see pursuing police.
+	var vehicles=race.Contacts.vehicles(race)
 	var safest=2.0
 	var best_score=-INF
 	for candidate in [-4.8,-1.6,1.6,4.8]:
 		var score= -absf(candidate-player.lane)*.35 + (2.0 if candidate>0 else -100.0)
-		for car in race.traffic:
+		for car in vehicles:
 			var gap=car.s-player.distance
 			if gap>-5 and gap<maxf(32,absf(player.speed-car.speed)*1.5):
 				score-= maxf(0,3-absf(candidate-car.lane))*12*(1-gap/120)
@@ -56,13 +58,13 @@ func _physics_process(dt):
 	player.curve_force=race.route.curvature(player.distance)
 	var steer=Driver.steer(player,lane_target)
 	var clear_road = absf(steer)<.6
-	for car in race.traffic:
+	for car in vehicles:
 		if car.s>player.distance and car.s-player.distance<maxf(45,absf(player.speed+12-car.speed)*3.4) and absf(car.lane-player.lane)<2.0: clear_road=false
 	var upcoming_curve = absf(race.route.curvature(player.distance))
 	for ahead in [15,30,50,70]: upcoming_curve=maxf(upcoming_curve,absf(race.route.curvature(player.distance+ahead)))
 	var safe_speed = player.corner_speed(upcoming_curve,player.top_speed,player.handling)
 	var brake = clampf((player.speed-safe_speed)*.22,0,1)
-	for car in race.traffic:
+	for car in vehicles:
 		var gap=car.s-player.distance
 		var closing=maxf(0,player.speed-car.speed)
 		if car.speed>=0 and gap>0 and gap<maxf(12,closing*closing/50+8) and absf(car.lane-player.lane)<2.1:
