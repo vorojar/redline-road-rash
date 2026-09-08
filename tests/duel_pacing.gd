@@ -32,6 +32,7 @@ func run():
 	race.set_process(false)
 	race.set_physics_process(false)
 	race.mode="racing"
+	race.elapsed=10 # These fixtures exercise combat after the launch phase.
 	race.player.distance=50
 	race.player.speed=45
 	for r in race.racers: r.s=1000

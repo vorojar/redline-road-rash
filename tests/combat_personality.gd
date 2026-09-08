@@ -14,6 +14,7 @@ func check(value: bool, label: String):
 func fresh():
 	race.reset_race()
 	race.mode="racing"
+	race.elapsed=10 # These fixtures exercise combat after the launch phase.
 	race.player.distance=100
 	race.player.speed=40
 	for r in race.racers:

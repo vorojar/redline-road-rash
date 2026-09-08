@@ -82,6 +82,8 @@ static func choose_target(race: Node3D, index: int) -> int:
 	return target
 
 static func update(race: Node3D, dt: float) -> void:
+	# Launch on normal engine power before blending in pack waiting and combat.
+	var pack_blend = smoothstep(3.0,6.0,race.elapsed)
 	for i in range(race.racers.size()):
 		var r = race.racers[i]
 		r.grudge_time = maxf(0,r.grudge_time-dt)
@@ -122,14 +124,14 @@ static func update(race: Node3D, dt: float) -> void:
 		var aggression = r.aggression + minf(.4,r.revenge*.06)
 		var spec: Dictionary = race.career.bike(r.bike_id)
 		var base_speed: float = spec.top_speed*(.985+i*.0075)*race.difficulty().speed
-		var target_speed = pack_speed(base_speed,race.player.speed,gap)
+		var target_speed = lerpf(base_speed,pack_speed(base_speed,race.player.speed,gap),pack_blend)
 		var curve: float = absf(race.route.curvature(r.s))
 		for ahead in [15,35,60]: curve=maxf(curve,absf(race.route.curvature(r.s+ahead)))
 		if curve>.003:
 			target_speed = minf(target_speed,Bike.corner_speed(curve,base_speed,spec.handling)*(.97+r.skill*.03))
 		if r.windup<=0 and r.attack_time<=0:
 			r.combat_target = choose_target(race,i)
-		var dueling = update_duel(r,dt,r.combat_target==-1 and i==race.nearest_target() and r.retreat_time<=0 and race.player.speed>18 and race.player.crash_timer<=0 and (r.stagger<=0 or r.duel_time>0) and r.burst.remaining<=0 and race.burst.remaining<=0 and absf(r.lane-race.player.lane)<3.2,gap,r.speed-race.player.speed)
+		var dueling = update_duel(r,dt,pack_blend>=1 and r.combat_target==-1 and i==race.nearest_target() and r.retreat_time<=0 and race.player.speed>18 and race.player.crash_timer<=0 and (r.stagger<=0 or r.duel_time>0) and r.burst.remaining<=0 and race.burst.remaining<=0 and absf(r.lane-race.player.lane)<3.2,gap,r.speed-race.player.speed)
 		var target_valid: bool = r.combat_target==-1 and race.player.crash_timer<=0
 		var target_s: float = race.player.distance
 		var target_lane: float = race.player.lane
@@ -143,11 +145,11 @@ static func update(race: Node3D, dt: float) -> void:
 		var combat_gap: float = r.s-target_s
 		var desired = float(r.home_lane)
 		if target_valid and absf(combat_gap)<35:
-			desired = tactical_lane(race,r,target_s,target_lane)
+			desired = lerpf(r.home_lane,tactical_lane(race,r,target_s,target_lane),pack_blend)
 			if absf(combat_gap)<12 and (r.combat_target==-1 or absf(gap)<25):
-				target_speed = minf(target_speed,maxf(6,opponent_speed+clampf(-combat_gap*1.5,-7,7)))
+				target_speed = lerpf(target_speed,minf(target_speed,maxf(6,opponent_speed+clampf(-combat_gap*1.5,-7,7))),pack_blend)
 		if r.combat_target==-1 and (dueling or (absf(gap)<14 and aggression>.55)) and race.player.crash_timer == 0:
-			desired = tactical_lane(race,r,target_s,target_lane)
+			desired = lerpf(r.home_lane,tactical_lane(race,r,target_s,target_lane),pack_blend)
 		if r.retreat_time>0:
 			r.windup = 0
 			r.stealing = false
@@ -198,7 +200,7 @@ static func update(race: Node3D, dt: float) -> void:
 					else: Combat.racer_strike(race,r,r.combat_target)
 					if r.style==1: r.retreat_time = 1.1
 				r.cooldown = (1.8 if r.style==1 else 2.2 if r.style==3 and r.weapon>0 else 2.5)+(1-aggression)*2
-		elif close and (r.combat_target!=-1 or not player_under_attack) and r.cooldown<=0 and r.stagger<=0 and r.guard<=0 and r.dodge<=0:
+		elif pack_blend>=1 and close and (r.combat_target!=-1 or not player_under_attack) and r.cooldown<=0 and r.stagger<=0 and r.guard<=0 and r.dodge<=0:
 			r.stealing = steal_opportunity(race,r)
 			r.kind = 0 if r.stealing else 1 if r.style==2 else 2 if r.weapon>0 else 0
 			r.attack_side = -1.0 if target_lane<r.lane else 1.0

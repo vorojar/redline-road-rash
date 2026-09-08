@@ -42,6 +42,10 @@ run_checked work/verify-lane-recovery.log --headless --path "$ROOT" --script res
 cat work/verify-lane-recovery.log
 run_checked work/verify-arcade-cornering.log --headless --path "$ROOT" --script res://tests/arcade_cornering.gd
 cat work/verify-arcade-cornering.log
+run_checked work/verify-minimap.log --headless --path "$ROOT" --script res://tests/minimap.gd
+cat work/verify-minimap.log
+run_checked work/verify-launch.log --headless --path "$ROOT" --script res://tests/race_launch.gd
+cat work/verify-launch.log
 run_checked work/verify-duel.log --headless --path "$ROOT" --script res://tests/duel_pacing.gd
 cat work/verify-duel.log
 run_checked work/verify-combat-pack.log --headless --path "$ROOT" --script res://tests/combat_pack.gd
