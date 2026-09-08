@@ -302,22 +302,15 @@ func draw_settings() -> void:
 
 func draw_race() -> void:
 	var p = race.player
-	if race.mode=="racing" and p.crash_timer<=0:
-		var preview = race.route.curvature(p.distance+maxf(25,p.speed*1.4))
-		if absf(preview)>.006:
-			var advised = int(p.corner_speed(preview,p.top_speed,p.handling)*3.6/10)*10
-			panel(Rect2(532,28,370,68))
-			text(("左弯  <<" if preview>0 else ">>  右弯")+"   建议 %d km/h" % advised,551,57,20,gold,true)
-			text("入弯前收油 / 刹车" if p.speed*3.6>advised+10 else "保持选线 · 出弯加速",551,82,15,red if p.speed*3.6>advised+10 else faded)
 	# The classic race information belongs on the instrument panel, keeping the road open.
 	panel(Rect2(0,730,1440,170),Color("101713"))
 	draw_line(Vector2(0,732),Vector2(1440,732),Color("717567"),3)
-	text("REDLINE",28,766,22,cream,true)
-	text("RIDER",29,804,13,faded)
+	text("公路狂徒",28,766,22,cream,true)
+	text("骑手",29,804,13,faded)
 	bar(97,796,190,p.health,Color("789463"))
-	text("BIKE",29,835,13,faded)
+	text("车况",29,835,13,faded)
 	bar(97,827,190,p.durability/p.max_durability*100,gold)
-	text("BALANCE",29,866,13,faded)
+	text("平衡",29,866,13,faded)
 	bar(97,858,190,p.stability,red if p.stability<40 else Color("758e82"))
 	dial(Vector2(397,817),67,p.speed*3.6,240,"KM/H")
 	text("%03d" % int(p.speed*3.6),490,830,62 if race.career.settings.large_hud else 49,cream,true)
@@ -353,10 +346,6 @@ func draw_race() -> void:
 		panel(Rect2(40,30,264,81))
 		text(r.name+(("  /  正在夺械" if r.stealing else "  /  即将攻击") if (r.windup>0 and r.combat_target==-1) else "  /  "+race.RacerAI.intent_label(r)),58,60,18,red if (r.windup>0 and r.combat_target==-1) else cream,true)
 		bar(58,82,226,r.hp,red)
-		var world_pos = r.mesh.global_position+Vector3(0,2.15,0)
-		if opponent==race.target_index and not race.camera.is_position_behind(world_pos):
-			var screen = race.camera.unproject_position(world_pos)/get_viewport_rect().size*Vector2(1440,900)
-			draw_arc(screen,13,0,TAU,20,red if (r.windup>0 and r.combat_target==-1) else gold,2)
 	if race.tutorial and race.mode == "racing":
 		var lessons = ["01  按住油门，达到 70 km/h","02  左右转向，移动到另一条车道","03  靠近骑手，按 J / K / L 命中一次","04  按住 Shift 蓄满，再松开冲刺","教学完成 · 继续挑战终点，练习中不会报废"]
 		panel(Rect2(415,30,610,59))

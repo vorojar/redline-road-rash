@@ -101,15 +101,31 @@ func run() -> void:
 				check(material.get_shader_parameter("color_map")==source.albedo_texture and source.albedo_texture.get_width()>=512,"人物换色保留真实贴图："+source.resource_name)
 				check(material.get_shader_parameter("normal_map")==source.normal_texture and source.normal_enabled,"法线细节接入："+source.resource_name)
 				check(material.get_shader_parameter("roughness_channel")==source.roughness_texture_channel,"粗糙度读取导入后的正确通道")
-			else:
+			elif source.resource_name != "Racing helmet":
 				check(mesh.get_active_material(surface) is StandardMaterial3D,"面罩及金属保留独立 PBR 材质："+source.resource_name)
 
 	var helmet_shell = race.player_mesh.rider.find_child("Full face helmet shell",true,false)
 	var helmet_visor = race.player_mesh.rider.find_child("Full face helmet visor",true,false)
 	var visor_material: StandardMaterial3D = helmet_visor.get_active_material(0)
 	check(visor_material.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and visor_material.albedo_color.a==1.0,"全盔面罩不透明，遮住脸部网格")
-	check(helmet_shell.get_active_material(0) is StandardMaterial3D and helmet_shell.get_active_material(0).albedo_texture==helmet_shell.mesh.surface_get_material(0).albedo_texture,"第三方头盔保留原始涂装，不误套衣服换色遮罩")
+	check(helmet_shell.get_active_material(0).get_shader_parameter("color_map")==helmet_shell.mesh.surface_get_material(0).albedo_texture,"头盔独立涂装保留源贴图，不套用衣服遮罩")
 	check(helmet_shell.mesh.get_aabb().size.x>.25 and helmet_shell.mesh.get_aabb().size.x<.30 and helmet_shell.skin!=null and helmet_visor.skin!=null,"全盔按成人头围适配，外壳和面罩一起蒙皮")
+
+
+	var patterns: Dictionary = {}
+	var colors: Dictionary = {}
+	var riders = [race.player_mesh]
+	for rival in race.racers: riders.append(rival.mesh)
+	for actor in riders:
+		var shell = actor.rider.find_child("Full face helmet shell",true,false).get_active_material(0)
+		var suit = actor.rider.find_child("Continuous racing suit",true,false)
+		var jacket: ShaderMaterial
+		for surface in range(suit.mesh.get_surface_count()):
+			if suit.mesh.surface_get_material(surface).resource_name=="Jacket leather": jacket=suit.get_active_material(surface)
+		check(shell.get_shader_parameter("tint")==jacket.get_shader_parameter("tint"),"每位骑手的头盔与衣服使用同一配色")
+		patterns[shell.get_shader_parameter("pattern")]=true
+		colors[shell.get_shader_parameter("tint")]=true
+	check(patterns.size()==6 and colors.size()==6,"玩家与五名对手具有六种不同头盔花纹和颜色")
 
 	for suffix in ["L","R"]:
 		var axis: Vector3 = race.player_mesh.grip_axes[suffix]

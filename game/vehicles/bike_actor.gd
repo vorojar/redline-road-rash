@@ -67,7 +67,7 @@ func _ready() -> void:
 	rider = RIDER.instantiate()
 	add_child(rider)
 	skeleton = rider.find_child("Skeleton3D",true,false)
-	style_rider(Color("242622"),Color("303735"))
+	style_rider(Color("242622"))
 	for i in range(skeleton.get_bone_count()):
 		bone_ids[skeleton.get_bone_name(i).trim_suffix("_2")] = i
 	for suffix in ["L","R"]:
@@ -87,19 +87,26 @@ func _ready() -> void:
 			rear_probe = probe
 	pose(0,0,0,0,0,1,0)
 
-func style_rider(jacket: Color, helmet: Color) -> void:
+func style_rider(jacket: Color, helmet_pattern: int = 0) -> void:
 	for mesh in rider.find_children("*","MeshInstance3D",true,false):
 		mesh.material_override = null
 		for surface in range(mesh.mesh.get_surface_count()):
 			var source: Material = mesh.mesh.surface_get_material(surface)
 			var material_name: String = source.resource_name
+			if material_name == "Racing helmet":
+				var livery = ShaderMaterial.new()
+				livery.shader = preload("res://game/vehicles/helmet_livery.gdshader")
+				livery.set_shader_parameter("tint",jacket)
+				livery.set_shader_parameter("color_map",source.albedo_texture)
+				livery.set_shader_parameter("pattern",helmet_pattern)
+				mesh.set_surface_override_material(surface,livery)
+				continue
 			if not source is StandardMaterial3D or source.albedo_texture == null or material_name not in ["Jacket leather","Suit limbs","Helmet"]:
 				mesh.set_surface_override_material(surface,source.duplicate())
 				continue
 			var material = ShaderMaterial.new()
 			material.shader = preload("res://game/vehicles/worn_surface.gdshader")
 			var color = jacket
-			if material_name == "Helmet": color = helmet
 			material.set_shader_parameter("tint",color)
 			material.set_shader_parameter("color_map",source.albedo_texture)
 			material.set_shader_parameter("normal_map",source.normal_texture)

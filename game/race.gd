@@ -181,7 +181,7 @@ func reset_race() -> void:
 	player_mesh.contact_started=-100.0
 	player_mesh.contact_strength=0.0
 	player_mesh.set_model(career.bike())
-	player_mesh.style_rider(Color("354f68"),Color("eee4cd"))
+	player_mesh.style_rider(Color("354f68"))
 	player_mesh.position = route.point(0,player.lane)
 	elapsed = 0
 	countdown = 3
@@ -204,7 +204,7 @@ func reset_race() -> void:
 		var bike_id = (["ratchet","ratchet","ratchet","revenant","revenant"] if track.id=="pine" else ["ratchet","revenant","revenant","phantom","phantom"])[i]
 		actor.set_model(career.bike(bike_id))
 		actor.tint([Color("454641"),Color("777069"),Color("8c7c3f"),Color("223a48"),Color("531e1a")][i])
-		actor.style_rider([Color("b94132"),Color("e0b84b"),Color("3c83b7"),Color("60a16c"),Color("bc7850")][i],[Color("e2ddd0"),Color("c04435"),Color("e2ddd0"),Color("e4bf46"),Color("263747")][i])
+		actor.style_rider([Color("b94132"),Color("e0b84b"),Color("3c83b7"),Color("60a16c"),Color("bc7850")][i],i+1)
 		racers.append({"mesh":actor,"name":["AXEL","NOVA","ROOK","JINX","VIPER"][i],"s":4.0+i*5,"lane":-4.5+i*2,"home_lane":-4.5+i*2,"speed":0.0,"hp":100.0,"stability":100.0,"crash":0.0,"cooldown":3.0+i,"finished":false,"finish_time":0.0,"aggression":.3+i*.14,"skill":.4+i*.13,"revenge":0,"last_hit_age":999.0,"stagger":0.0,"windup":0.0,"attack_time":0.0,"ko_credited":false,"weapon":[0,1,0,2,1][i],"guard":0.0,"dodge":0.0,"defense_cd":0.0,"stamina":100.0,"kind":0,"style":i,"crash_speed":0.0,"bike_id":bike_id,"burst":Burst.new(),"duel_time":0.0,"duel_cooldown":0.0,"combat_target":-2,"attack_side":1.0,"grudge_target":-2,"grudge_time":0.0,"retreat_time":0.0,"retreat_cooldown":0.0,"stealing":false})
 	for i in range(18):
 		var truck = i%6 == 5
