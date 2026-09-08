@@ -93,7 +93,7 @@ func style_rider(jacket: Color, helmet: Color) -> void:
 		for surface in range(mesh.mesh.get_surface_count()):
 			var source: Material = mesh.mesh.surface_get_material(surface)
 			var material_name: String = source.resource_name
-			if not source is StandardMaterial3D or source.albedo_texture == null:
+			if not source is StandardMaterial3D or source.albedo_texture == null or material_name not in ["Jacket leather","Suit limbs","Helmet"]:
 				mesh.set_surface_override_material(surface,source.duplicate())
 				continue
 			var material = ShaderMaterial.new()

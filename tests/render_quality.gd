@@ -76,6 +76,10 @@ func run() -> void:
 	var race = load("res://game/race.gd").new()
 	race.test_mode = true;root.add_child(race)
 	race.set_process(false);race.set_physics_process(false)
+	var environment: Environment = race.find_children("*","WorldEnvironment",true,false)[0].environment
+	check(environment.fog_mode==Environment.FOG_MODE_DEPTH and environment.fog_depth_begin>=180.0 and environment.fog_depth_end<=650.0,"远景薄雾保留至少 180 米清晰驾驶视距，并在手机裁剪前完成过渡")
+	var roadblock_fog = pow(clampf((220.0-environment.fog_depth_begin)/(environment.fog_depth_end-environment.fog_depth_begin),0,1),environment.fog_depth_curve)
+	check(roadblock_fog<.03,"220 米路障预警位置的雾遮挡低于 3%")
 	race.touch_device = true
 	for level in range(3):
 		race.career.settings.render_quality = level;race.apply_render_quality()
@@ -99,6 +103,13 @@ func run() -> void:
 				check(material.get_shader_parameter("roughness_channel")==source.roughness_texture_channel,"粗糙度读取导入后的正确通道")
 			else:
 				check(mesh.get_active_material(surface) is StandardMaterial3D,"面罩及金属保留独立 PBR 材质："+source.resource_name)
+
+	var helmet_shell = race.player_mesh.rider.find_child("Full face helmet shell",true,false)
+	var helmet_visor = race.player_mesh.rider.find_child("Full face helmet visor",true,false)
+	var visor_material: StandardMaterial3D = helmet_visor.get_active_material(0)
+	check(visor_material.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and visor_material.albedo_color.a==1.0,"全盔面罩不透明，遮住脸部网格")
+	check(helmet_shell.get_active_material(0) is StandardMaterial3D and helmet_shell.get_active_material(0).albedo_texture==helmet_shell.mesh.surface_get_material(0).albedo_texture,"第三方头盔保留原始涂装，不误套衣服换色遮罩")
+	check(helmet_shell.mesh.get_aabb().size.x>.25 and helmet_shell.mesh.get_aabb().size.x<.30 and helmet_shell.skin!=null and helmet_visor.skin!=null,"全盔按成人头围适配，外壳和面罩一起蒙皮")
 
 	for suffix in ["L","R"]:
 		var axis: Vector3 = race.player_mesh.grip_axes[suffix]

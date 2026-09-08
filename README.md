@@ -29,7 +29,7 @@ Godot 4 制作的 3D 公路摩托竞速与近战格斗游戏。当前版本 v0.5
 
 ## 当前内容
 
-- 三款不同外形和性能的摩托，以及可旋转、缩放的 3D 车库。赛车服、头盔与车身采用原创 UV 贴图、法线和粗糙度，涂装换色保留白色标识，车损与车库共用漆面材质。
+- 三款不同外形和性能的摩托，以及可旋转、缩放的 3D 车库。赛车服与车身采用原创 UV 贴图、法线和粗糙度；骑手使用带封闭镜片的成熟全盔素材，涂装换色保留白色标识，车损与车库共用漆面材质。
 - 松岭公路（3 km）、海岸断崖（3.6 km）和跨郡耐力赛（12 km）三条赛道，包含连续左右弯和起伏；弯道需要主动按对应方向，持续按住时限制转向幅度，松手不再自动随弯；直道左右输入柔和变道并在松手后回正；高速过弯只减速、不自动扣稳定值。短暂压路肩不直接摔车，碰撞和受击仍会失衡。
 - 摩托与汽车、摩托之间具备实体阻挡，免伤不允许穿车；追尾减速并产生前倾回弹，重撞可摔车。比赛中的浮动通知、快捷键说明和摔车文字已移除，保留仪表与教学。
 - 转向采用柔和的小幅响应、高速抑制和渐进起转；松手快速收回变道角度，减少持续横移。
@@ -90,9 +90,9 @@ python3 -m http.server 5033 --directory outputs/web
 | `web/` | 网页入口、加载状态和授权页 |
 | `tests/` | 隔离存档的规则和整场回归 |
 
-先用 `python3 scripts/build_surface_maps.py`（需要 Pillow）生成原创车辆 / 赛车服贴图。RATCHET 使用 Silas6 的 CC-BY 4.0 街车模型，由 `scripts/import_street_bike.py` 从保留的源 GLB 重建；前后轮独立滚动和悬挂、贴图最高 1K，骑姿按实际握把适配。其他 Blender 模型可由 `scripts/build_models.py`、`build_bike_variants.py`、`build_traffic.py` 重建；`scripts/build_rider.py` 也可单独重建骑手。贴图、GLB 与 `.blend` 均已入库，日常运行不需要 Blender。音频脚本 `scripts/build_audio.py` 需要 numpy 和 ffmpeg，原始音乐文件可从授权页下载；日常运行无需重新生成资源。
+先用 `python3 scripts/build_surface_maps.py`（需要 Pillow）生成原创车辆 / 赛车服贴图。RATCHET 使用 Silas6 的 CC-BY 4.0 街车模型，由 `scripts/import_street_bike.py` 从保留的源 GLB 重建；前后轮独立滚动和悬挂、贴图最高 1K，骑姿按实际握把适配。其他 Blender 模型可由 `scripts/build_models.py`、`build_bike_variants.py`、`build_traffic.py` 重建；`scripts/build_rider.py` 从 MakeHuman 人体和 djengala 全盔（CC BY 4.0）源素材单独重建骑手。贴图、GLB 与 `.blend` 均已入库，日常运行不需要 Blender。音频脚本 `scripts/build_audio.py` 需要 numpy 和 ffmpeg，原始音乐文件可从授权页下载；日常运行无需重新生成资源。
 
-道路与地面使用共享的宏观颜色/磨损材质，远景贴图启用 mipmaps。植被采用近景交叉面、远景 billboard 和分区 MultiMesh；手机减少近景层次及电缆。轿车与独立箱式货车由 `scripts/build_traffic.py` 重建，车漆、玻璃、灯具和车身细节分别处理。护栏、反光柱、碎石灌木与电线杆由 `game/world/roadside_details.gd` 按赛道生成。
+道路与地面使用共享的宏观颜色/磨损材质，远景贴图启用 mipmaps；180 米外使用渐进深度雾，在手机远裁剪前隐藏远处场景边界。植被采用近景交叉面、远景 billboard 和分区 MultiMesh；手机减少近景层次及电缆。轿车与独立箱式货车由 `scripts/build_traffic.py` 重建；不透明深色车窗与上沿遮阳带遮住简化车厢，后视镜使用独立镜面，车漆与灯具分别处理。骑手软领口与长手套袖口沿用身体蒙皮，遮住装备接缝。护栏、反光柱、碎石灌木与电线杆由 `game/world/roadside_details.gd` 按赛道生成。
 
 ## 素材与授权
 
@@ -104,7 +104,7 @@ python3 -m http.server 5033 --directory outputs/web
 - Noto Sans SC：SIL OFL 1.1。
 - Godot Engine：MIT。
 - RATCHET 摩托模型及基础贴图：Silas6 — Motorcycle（CC BY 4.0），经尺寸、轮组、贴图分辨率及运行材质适配。
-- 图标与树木图像由 AI 生成；人体基础网格和蒙皮权重来自 MakeHuman（CC0）；其余车辆、车手装备与原创涂装、程序动画及其余 Foley 为本项目制作。
+- 图标与树木图像由 AI 生成；人体基础网格和蒙皮权重来自 MakeHuman（CC0）；全盔来自 djengala（CC BY 4.0）；其余车辆、其余车手装备与原创涂装、程序动画及其余 Foley 为本项目制作。
 
 本项目与 Electronic Arts 或 Road Rash 官方无关联。
 

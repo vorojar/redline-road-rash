@@ -1,5 +1,6 @@
 """Fit racing leathers and original equipment to the CC0 MakeHuman anatomical body."""
 import os
+from mathutils import Matrix
 exec(open(os.path.join(os.path.dirname(__file__), 'build_models.py')).read().split("if '--rider-only'")[0])
 
 leather=mapped('Jacket leather','rider_suit',.61)
@@ -38,28 +39,34 @@ def loft(name,rings,material,bone,origin=Vector((0,0,0)),basis=None):
  sub=obj.modifiers.new('Tailored surface','SUBSURF');sub.levels=1;bpy.ops.object.modifier_apply(modifier=sub.name)
  return bind(obj,bone)
 exec(compile(open(os.path.join(ROOT,'scripts/build_human_body.py')).read(),os.path.join(ROOT,'scripts/build_human_body.py'),'exec'))
-# A single full-face shell: narrow jaw, swept chin and crown. Visor conforms to shell.
-loft('Full face shell',[(1.64,.096,.117,.027),(1.67,.122,.149,.027),(1.71,.136,.158,.016),(1.755,.143,.157,.007),(1.80,.139,.157,0),(1.85,.119,.139,-.008),(1.89,.075,.095,-.014),(1.906,.008,.012,-.015)],helm,'head')
-verts=[];faces=[]
-for z,rx,ry,cy in [(1.735,.142,.162,.012),(1.775,.145,.163,.007),(1.821,.132,.155,-.001)]:
- for i in range(25):
-  a=.10+(math.pi-.20)*i/24;verts.append((rx*math.cos(a),cy+ry*math.sin(a),z))
-for j in range(2):
- for i in range(24):
-  k=j*25+i;faces.append((k,k+1,k+26,k+25))
-mesh=bpy.data.meshes.new('Wraparound visor');mesh.from_pydata(verts,[],faces);mesh.update();obj=bpy.data.objects.new('Wraparound visor',mesh);bpy.context.collection.objects.link(obj);finish(obj,obj.name,glass);bind(obj,'head')
-for side in [-1,1]:
- bind(tube('Visor hinge',(side*.141,.022,1.776),(side*.147,.022,1.776),.016,dark),'head')
- bind(cube('Chin intake',(side*.035,.171,1.678),(.044,.008,.012),black,.004),'head')
- bind(cube('Crown vent',(side*.047,.098,1.877),(.025,.032,.009),black,.004),'head')
-# Fit the helmet shell to the anatomical head, leaving a short fabric-covered neck.
-for obj in bpy.context.scene.objects:
- if obj.type=='MESH' and obj!=body:
-  inverse=obj.matrix_world.inverted()
-  for vertex in obj.data.vertices:
-   p=obj.matrix_world@vertex.co
-   p.x*=.94;p.y*=.94;p.z=1.54+(p.z-1.54)*.86
-   vertex.co=inverse@p
+# CC BY djengala full-face helmet: preserve the authored shell, liner and visor.
+# Source faces -Y; the rider faces +Y. Bake transforms before binding to the head.
+helmet_before=set(bpy.context.scene.objects)
+bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT,'assets/models/source/djengala/helmet.glb'))
+helmet_objects=[o for o in bpy.context.scene.objects if o not in helmet_before]
+for obj in helmet_objects:
+ if obj.type!='MESH':continue
+ transform=Matrix.Translation(Vector((0,.01,1.615+3.9604609013*.032))) @ Matrix.Diagonal((-.032,-.032,.032,1)) @ obj.matrix_world
+ normals=[(transform.to_3x3().inverted().transposed()@n.vector).normalized() for n in obj.data.corner_normals]
+ obj.data.transform(transform)
+ obj.data.normals_split_custom_set(normals)
+ obj.parent=None;obj.matrix_world=Matrix.Identity(4)
+ material=obj.active_material
+ if material.name=='helmet':
+  image=next(n.image for n in material.node_tree.nodes if n.type=='TEX_IMAGE' and n.image.name=='Image_0')
+  shell=mat('Racing helmet',(.8,.8,.8),.14,.28)
+  texture=shell.node_tree.nodes.new('ShaderNodeTexImage');texture.image=image
+  shell.node_tree.links.new(texture.outputs['Color'],shell.node_tree.nodes.get('Principled BSDF').inputs['Base Color'])
+  obj.data.materials.clear();obj.data.materials.append(shell);obj.name='Full face helmet shell'
+ elif material.name=='interieur':
+  obj.data.materials.clear();obj.data.materials.append(black);obj.name='Full face helmet liner'
+ else:
+  # Opaque smoked mirror avoids exposing the intentionally hidden facial mesh.
+  visor=mat('Helmet mirror visor',(.16,.25,.31),.72,.15)
+  obj.data.materials.clear();obj.data.materials.append(visor);obj.name='Full face helmet visor'
+ bind(obj,'head')
+for obj in helmet_objects:
+ if obj.type!='MESH':bpy.data.objects.remove(obj,do_unlink=True)
 # Tailor protectors to the actual skinned body, sharing its blended weights.
 # Surface patches avoid floating rigid shells when shoulders and knees flex.
 def fitted_protector(name,center,radius,material,depth):
@@ -93,11 +100,14 @@ def fitted_protector(name,center,radius,material,depth):
  sub=obj.modifiers.new('Rounded protector boundary','SUBSURF');sub.levels=2;bpy.ops.object.modifier_apply(modifier=sub.name)
  mod=obj.modifiers.new('Shared anatomical skinning','ARMATURE');mod.object=rig;obj.parent=rig
  return obj
+# Soft overlapping garment edges conceal the neck and glove-to-sleeve transitions.
+fitted_protector('Padded collar',(0,0,1.565),(.105,.12,.065),black,.013)
 fitted_protector('Tailored back hump',(0,-.075,1.415),(.105,.12,.10),leather,.022)
 for side,sign in [('L',-1),('R',1)]:
  fitted_protector('Shoulder armor '+side,(sign*.24,0,1.44),(.085,.11,.072),armor,.009)
  fitted_protector('Elbow reinforcement '+side,(sign*.24,-.045,1.18),(.063,.065,.065),armor,.006)
  fitted_protector('Knee slider '+side,(sign*.14,.065,.575),(.073,.065,.062),armor,.012)
+ fitted_protector('Gauntlet cuff '+side,(sign*.25,0,.97),(.075,.075,.052),black,.012)
  fitted_protector('Glove protection '+side,(sign*.25,-.018,.915),(.06,.05,.047),armor,.004)
 # Structured motorcycle boots cover the anatomical ankles with a toe box and cuff.
 for side in ['L','R']:

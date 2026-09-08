@@ -3,7 +3,10 @@ exec((Path(__file__).with_name('build_models.py')).read_text().split("if '--ride
 # Plain automotive paint: racing-bike decals do not belong on civilian cars.
 paint.name='Unused motorcycle paint'
 paint=mat('Paint',(.32,.38,.43),.48,.25)
+# Opaque glass and a dark upper tint hide the deliberately unmodeled interior.
 glass=mat('Window glass',(.025,.047,.061),.52,.16)
+sunstrip=mat('Window sunstrip',(.008,.016,.023),.18,.25)
+mirror=mat('Mirror glass',(.19,.25,.29),.85,.12)
 # Detailed 1990s civilian sedan, +Y forward.
 body=cube('Lower body',(0,0,.67),(1.8,4.05,.57),paint,.13)
 # Wheel openings cut through the fenders instead of burying tires in a box.
@@ -19,6 +22,10 @@ cube('Trunk',(0,-1.50,.99),(1.72,.75,.12),paint,.08)
 verts=[(-.79,-1.1,.95),(.79,-1.1,.95),(-.79,.8,.95),(.79,.8,.95),(-.66,-.78,1.57),(.66,-.78,1.57),(-.66,.30,1.57),(.66,.30,1.57)]
 faces=[(0,1,5,4),(2,6,7,3),(0,4,6,2),(1,3,7,5),(4,5,7,6)]
 mesh=bpy.data.meshes.new('Cabin');mesh.from_pydata(verts,[],faces);mesh.update();o=bpy.data.objects.new('Window glass',mesh);bpy.context.collection.objects.link(o);finish(o,'Window glass',glass)
+# A narrow band follows the actual sloped windshield, without z-fighting.
+strip=[Vector(verts[2]).lerp(Vector(verts[6]),.77),Vector(verts[3]).lerp(Vector(verts[7]),.77),Vector(verts[7]),Vector(verts[6])]
+mesh=bpy.data.meshes.new('Windshield upper tint');mesh.from_pydata([p+Vector((0,.007,.004)) for p in strip],[],[(0,3,2,1)]);mesh.update()
+o=bpy.data.objects.new('Windshield upper tint',mesh);bpy.context.collection.objects.link(o);finish(o,o.name,sunstrip)
 cube('Roof',(0,-.23,1.585),(1.39,1.16,.075),paint,.07)
 for a,b in [(verts[0],verts[4]),(verts[1],verts[5]),(verts[2],verts[6]),(verts[3],verts[7])]:tube('Window pillar',a,b,.035,paint)
 for x in [-.78,.78]:
@@ -34,6 +41,7 @@ for x in [-.61,.61]:
  cube('Headlight',(x,2.045,.80),(.48,.035,.20),light,.02)
  cube('Tail lamp',(x,-2.045,.82),(.43,.035,.17),red,.02)
  cube('Side mirror',(x*1.55,.52,1.18),(.21,.24,.13),paint,.06)
+ cube('Mirror insert',(x*1.55,.389,1.18),(.16,.012,.084),mirror,.019)
  for y in [-.67,.28]:cube('Door handle',(x*1.48,y,1.0),(.035,.17,.035),steel,.015)
 for y in [-2.08,2.08]:
  cube('Bumper',(0,y,.48),(1.72,.09,.17),dark,.06)
@@ -49,7 +57,7 @@ for side in [-1,1]:
   tube('Glass gasket',Vector(a)+Vector((0,0,.012)),Vector(b)+Vector((0,0,.012)),.013,black,8)
  cube('Turn signal',(side*.87,1.75,.8),(.027,.16,.065),amber,.008)
 cube('Rear center reflector',(0,-2.04,.85),(.34,.025,.07),red,.007)
-for material in [paint,black,steel,dark,chrome,seat,red,amber,glass,light]:
+for material in [paint,black,steel,dark,chrome,seat,red,amber,glass,light,sunstrip,mirror]:
  objs=[o for o in bpy.context.scene.objects if o.type=='MESH' and o.active_material==material]
  if not objs:continue
  bpy.ops.object.select_all(action='DESELECT')
@@ -66,12 +74,14 @@ cube('Truck chassis',(0,-.85,.52),(1.75,5.75,.22),dark,.05)
 cube('Cab',(0,1.21,1.05),(1.96,1.6,1.05),paint,.10)
 cube('Cab roof',(0,1.10,2.03),(1.96,1.68,.16),paint,.06)
 cube('Windshield',(0,1.95,1.68),(1.69,.032,.47),glass,.045)
+cube('Truck windshield upper tint',(0,1.971,1.856),(1.64,.012,.10),sunstrip,.018)
 for side in [-1,1]:
  cube('Cab side glass',(side*.986,1.17,1.68),(.028,1.05,.47),glass,.04)
  cube('Cab door handle',(side*.999,.82,1.25),(.03,.19,.05),steel,.01)
  cube('Cab step',(side*.96,1.07,.44),(.23,1.10,.11),steel,.035)
  tube('Mirror arm',(side*.97,1.8,1.72),(side*1.13,1.65,1.65),.018,dark)
  cube('Truck mirror',(side*1.12,1.61,1.64),(.13,.19,.29),dark,.035)
+ cube('Truck mirror insert',(side*1.12,1.512,1.64),(.09,.012,.23),mirror,.018)
  cube('Cab lamp',(side*.64,2.025,.96),(.4,.035,.18),light,.015)
  cube('Cab signal',(side*.89,2.023,.97),(.14,.039,.16),amber,.012)
  for y in [1.35,-2.77]:
@@ -93,7 +103,7 @@ cube('Rear underride bar',(0,-3.91,.38),(2.08,.13,.14),steel,.015)
 cube('Front bumper',(0,2.08,.63),(2.02,.15,.2),dark,.04)
 cube('Cab grille',(0,2.035,1.02),(.68,.025,.31),dark,.012)
 for z in [.92,1.02,1.12]:cube('Grille strip',(0,2.06,z),(.65,.018,.023),steel,.006)
-for material in [paint,black,steel,dark,glass,light,amber,red,cargo]:
+for material in [paint,black,steel,dark,glass,light,amber,red,cargo,sunstrip,mirror]:
  objs=[o for o in bpy.context.scene.objects if o.type=='MESH' and o.active_material==material]
  if not objs:continue
  bpy.ops.object.select_all(action='DESELECT')

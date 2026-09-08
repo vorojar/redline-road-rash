@@ -28,13 +28,15 @@ Web 字体：`fonts/RedlineUI.ttf` 为 Noto Sans SC 的字形子集，由 `scrip
 触控图标：Lucide，ISC license；`ui/*.svg` 来自 https://github.com/lucide-icons/lucide/tree/94e4cb9d9db5907053ebf3636a97c45529cf776b/icons 。使用 hand-fist、shield、zap、pause、disc-3、hand-grab、move-horizontal；仅将固有尺寸设为 96px、描边设为白色供运行时着色。许可证附 `LUCIDE_LICENSE.txt`。
 
 
-骑手 / 车辆表面贴图：`textures/vehicles/*` 的 albedo、OpenGL normal 和 roughness 由 `scripts/build_surface_maps.py`（Pillow）原创绘制，使用项目自有 REDLINE / ROAD DIVISION 图案及号码。albedo alpha 为队伍换色遮罩，运行材质保持不透明。贴图内字形使用上述 SIL OFL Noto Sans SC；未使用参考照片、第三方车队涂装或游戏贴图。模型 UV、全盔外壳及车身曲面由 Blender 脚本制作；赛车服基于下述成熟人体网格适配，纹理嵌入 GLB。
+骑手 / 车辆表面贴图：`textures/vehicles/*` 的 albedo、OpenGL normal 和 roughness 由 `scripts/build_surface_maps.py`（Pillow）原创绘制，使用项目自有 REDLINE / ROAD DIVISION 图案及号码。albedo alpha 为队伍换色遮罩，运行材质保持不透明。贴图内字形使用上述 SIL OFL Noto Sans SC；未使用参考照片、第三方车队涂装或游戏贴图。模型 UV 及车身曲面由 Blender 脚本制作；赛车服基于下述成熟人体网格适配，纹理嵌入 GLB。
 
 
-人体基础网格、成年体型形变及蒙皮权重：MakeHuman Community 核心资产，CC0 1.0。固定来源提交 `a8bc2d54ff0ac92e78ff71431b1023eda42bf482`，原始资产保存在 `models/source/makehuman/`，未引入 MakeHuman 应用程序代码。`scripts/build_human_body.py` 应用成年体型、保留连续人体拓扑，将权重映射到游戏骨骼，调整手指握姿并生成赛车服表面；头盔与护靴为本项目几何。资产来源：https://github.com/makehumancommunity/makehuman/tree/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data 。授权说明：https://static.makehumancommunity.org/about/license.html 。CC0 全文附 `MAKEHUMAN_CC0.txt`。
+人体基础网格、成年体型形变及蒙皮权重：MakeHuman Community 核心资产，CC0 1.0。固定来源提交 `a8bc2d54ff0ac92e78ff71431b1023eda42bf482`，原始资产保存在 `models/source/makehuman/`，未引入 MakeHuman 应用程序代码。`scripts/build_human_body.py` 应用成年体型、保留连续人体拓扑，将权重映射到游戏骨骼，调整手指握姿并生成赛车服表面；护靴为本项目几何，头盔采用下述 djengala 素材。资产来源：https://github.com/makehumancommunity/makehuman/tree/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data 。授权说明：https://static.makehumancommunity.org/about/license.html 。CC0 全文附 `MAKEHUMAN_CC0.txt`。
 
 
 网页首页封面：使用内置 imagegen 生成的原创公路摩托竞速主题图。原始 PNG 保存在 `branding/source/title-road.png`，网页 WebP 为 `web/title-road.webp`，生成提示词保存在 `branding/source/title-road-prompt.txt`。这是首页宣传插画，不是游戏运行截图。
 
 
 RATCHET 街车：`models/ratchet.glb` 改编自 [Motorcycle](https://sketchfab.com/3d-models/motorcycle-693e83d86e1e4e5b95e4314dbdd95d40)，作者 [Silas6](https://sketchfab.com/Silas6)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。2026-09-08 从 Sketchfab 官方免费下载原始 GLB，保存在 `models/source/silas6/motorcycle.glb`。修改包括轴距/尺寸适配、保持圆形轮胎的轮组拆分、贴图降至最高 1K、握把接触位置，以及运行时车漆换色和车损。原始几何和贴图归属 Silas6；不暗示作者为本项目背书。可用 `scripts/import_street_bike.py` 从保留的源 GLB 重建。许可证全文附 `CC-BY-4.0.txt`。
+
+骑手全盔：改编自 [motorcycle HELMET](https://sketchfab.com/3d-models/motorcycle-helmet-1d489db9cdc24161a7537926a20bb17b)，作者 [djengala](https://sketchfab.com/djengala)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。原始 GLB 保存在 `models/source/djengala/helmet.glb`；`scripts/build_rider.py` 调整尺寸和朝向、绑定头部骨骼、适配外壳 PBR 并将透明镜片改为不透明烟蓝镜面。原始外壳、内衬和涂装归属作者；不暗示作者背书。许可证全文附 `CC-BY-4.0.txt`。

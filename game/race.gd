@@ -137,7 +137,12 @@ func build_environment() -> void:
 	env.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.environment.fog_enabled = true
 	env.environment.fog_light_color = Color("b5c6ce")
-	env.environment.fog_density = .00095
+	# Keep the approach to traffic/roadblocks clear; only distant scenery dissolves.
+	env.environment.fog_mode = Environment.FOG_MODE_DEPTH
+	env.environment.fog_depth_begin = 180.0
+	env.environment.fog_depth_end = 650.0
+	env.environment.fog_depth_curve = 1.6
+	env.environment.fog_density = 1.0
 	add_child(env)
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-34,-48,0)

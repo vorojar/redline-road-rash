@@ -22,13 +22,19 @@ func run() -> void:
 		var car = Traffic.vehicle(color,truck)
 		root.add_child(car)
 		var paints = 0
+		var concealed_windows = 0
 		var triangles = 0
 		for mesh in car.find_children("*","MeshInstance3D",true,false):
 			for surface in range(mesh.mesh.get_surface_count()):
 				triangles += mesh.mesh.surface_get_arrays(surface)[Mesh.ARRAY_INDEX].size()/3
+				var material = mesh.get_active_material(surface)
+				if material.resource_name in ["Window glass","Window sunstrip"]:
+					concealed_windows += 1
+					check(material is StandardMaterial3D and material.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and material.albedo_color.a==1.0,"车窗与遮阳带完全遮住空车厢："+str(truck))
 				if mesh.mesh.surface_get_material(surface)!=null and mesh.mesh.surface_get_material(surface).resource_name=="Paint":
 					paints += 1
 					check(mesh.get_active_material(surface).albedo_color.is_equal_approx(color.srgb_to_linear()),"车型车漆使用指定颜色："+str(truck))
+		check(concealed_windows==2,"两种交通车都有车窗与上沿遮阳带："+str(truck))
 		check(paints==1,"轿车/货车均保留唯一可换色车身："+str(truck))
 		check(triangles>1000 and triangles<40000,"交通模型三角面预算："+str(truck))
 		var collider = car.get_node("VehicleSolid").get_child(0)
