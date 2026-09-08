@@ -51,17 +51,17 @@ func run() -> void:
 	check(not damaged.load_error.is_empty() and not damaged.save_profile() and FileAccess.get_file_as_string(career.path)=="{broken", "损坏存档拒绝覆盖原文件")
 	Controls.setup({"punch":KEY_F})
 	check(InputMap.action_get_events("punch")[0].physical_keycode==KEY_F,"键位映射应用")
-	for item in [["throttle",KEY_W,KEY_UP,KEY_KP_8],["brake",KEY_S,KEY_DOWN,KEY_KP_2],["left",KEY_A,KEY_LEFT,KEY_KP_4],["right",KEY_D,KEY_RIGHT,KEY_KP_6]]:
+	for item in [["throttle",KEY_W,KEY_UP],["brake",KEY_S,KEY_DOWN],["left",KEY_A,KEY_LEFT],["right",KEY_D,KEY_RIGHT]]:
 		for key in item.slice(1):
 			var input=InputEventKey.new()
 			input.physical_keycode=key; input.pressed=true
 			check(input.is_action_pressed(item[0]),"驾驶键 %s 对应 %s" % [OS.get_keycode_string(key),item[0]])
-	Controls.setup({"cruise":KEY_SPACE,"punch":KEY_KP_8})
+	Controls.setup({"cruise":KEY_SPACE,"punch":KEY_UP})
 	var space=InputEventKey.new()
 	space.physical_keycode=KEY_SPACE; space.pressed=true
 	check(space.is_action_pressed("primary_attack") and not space.is_action_pressed("cruise"),"旧空格定速绑定自动避让攻击")
 	check(Controls.key_label("cruise",{"cruise":KEY_SPACE})=="C","旧存档定速键提示与实际 C 绑定一致")
-	check(InputMap.action_get_events("punch")[0].physical_keycode==KEY_J,"旧小键盘自定义绑定避让固定驾驶键")
+	check(InputMap.action_get_events("punch")[0].physical_keycode==KEY_J,"旧方向键自定义绑定避让固定驾驶键")
 	var joy=false
 	for event in InputMap.action_get_events("throttle"):
 		if event is InputEventJoypadMotion:joy=true

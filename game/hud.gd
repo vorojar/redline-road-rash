@@ -385,7 +385,7 @@ func draw_overlay() -> void:
 	panel(Rect2(410,150,620,505))
 	text("PAUSED",450,221,49,cream,true)
 	text("比赛已暂停",450,269,22,gold)
-	text("WASD / 方向键 / 小键盘 8246 驾驶",450,330,21)
+	text("WASD / ↑ ↓ ← → 驾驶",450,330,21)
 	text("左键 / 空格攻击；刹车会取消定速油门。",450,375,19,faded)
 	button(Rect2(450,480,540,56),"继续比赛 / ESC",func(): race.menu_action("resume"),true)
 	button(Rect2(450,552,540,51),"返回赛事 / 车库",func(): race.menu_action("home"))
