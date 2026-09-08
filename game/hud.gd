@@ -360,17 +360,36 @@ func draw_race() -> void:
 	if race.mode in ["paused","finished","countdown"]:
 		draw_overlay()
 
+const MAP_BEHIND = 30.0
+const MAP_AHEAD = 258.0
+
+func mini_map_position(center: Vector2, distance: float, lane: float = 0.0) -> Vector2:
+	var relative = race.route.point(distance)-race.route.point(race.player.distance)
+	return center+Vector2(relative.x*.16+lane*2,40-(distance-race.player.distance)/3)
+
+func mini_map_riders(center: Vector2) -> Array[Vector2]:
+	var markers: Array[Vector2] = []
+	for rider in race.racers:
+		var gap: float = rider.s-race.player.distance
+		if gap>=-MAP_BEHIND and gap<=MAP_AHEAD:
+			markers.append(mini_map_position(center,rider.s,rider.lane))
+	return markers
+
 func draw_mini_map(center: Vector2) -> void:
 	var p = race.player
 	var prev = Vector2.ZERO
 	for i in range(25):
-		var s = clampf(p.distance-30+i*12,0,float(race.track.length))
-		var t = race.route.point(s)-race.route.point(p.distance)
-		var pos = center+Vector2(t.x*.16,-i*4+50)
+		var s = clampf(p.distance-MAP_BEHIND+i*(MAP_BEHIND+MAP_AHEAD)/24,0,float(race.track.length))
+		var pos = mini_map_position(center,s)
 		if i>0:
 			draw_line(prev,pos,Color("657268"),5)
 		prev = pos
-	draw_circle(center+Vector2(p.lane*.5,38),4,red)
+	for pos in mini_map_riders(center):
+		draw_circle(pos,3.5,Color("101713"))
+		draw_circle(pos,2.5,Color("e0c778"))
+	var player_pos = mini_map_position(center,p.distance,p.lane)
+	draw_circle(player_pos,5,Color("101713"))
+	draw_circle(player_pos,4,red)
 	text("ROUTE",center.x-24,center.y+65,11,faded)
 
 func draw_overlay() -> void:
