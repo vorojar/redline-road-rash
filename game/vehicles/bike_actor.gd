@@ -15,6 +15,7 @@ var celebration: float = 0.0
 var sport_tuck: float = 0.0
 var grip_height: float = 1.09
 var grip_forward: float = .51
+var grip_width: float = .39
 var rider: Node3D
 var skeleton: Skeleton3D
 var bone_ids: Dictionary = {}
@@ -111,6 +112,7 @@ func set_model(spec: Dictionary) -> void:
 	sport_tuck = 1.0 if spec.id == "phantom" else (.15 if spec.id == "revenant" else .55)
 	grip_height = spec.grip_height
 	grip_forward = spec.grip_forward
+	grip_width = spec.grip_width
 	front_probe.position.z = -.67*spec.wheelbase
 	rear_probe.position.z = .67*spec.wheelbase
 	if model_path != spec.model:
@@ -122,7 +124,7 @@ func set_model(spec: Dictionary) -> void:
 	damage_visuals.attach(self)
 
 func riding_grip(side: float) -> Vector3:
-	return Vector3(side*.39,grip_height,-grip_forward)
+	return Vector3(side*grip_width,grip_height,-grip_forward)
 
 func tint(color: Color) -> void:
 	for mesh in bike.find_children("*","MeshInstance3D",true,false):

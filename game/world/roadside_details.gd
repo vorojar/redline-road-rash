@@ -1,0 +1,115 @@
+extends RefCounted
+const V = preload("res://game/visuals.gd")
+
+static func rail_mesh() -> ArrayMesh:
+	# Folded W-beam profile catches light; collision remains the existing box.
+	var profile = [Vector2(0,-.14),Vector2(.035,-.11),Vector2(-.025,-.055),Vector2(.025,0),Vector2(-.025,.055),Vector2(.035,.11),Vector2(0,.14)]
+	var tool = SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(profile.size()-1):
+		var a: Vector2 = profile[i]
+		var b: Vector2 = profile[i+1]
+		var points = [Vector3(a.x,a.y,-4.075),Vector3(b.x,b.y,-4.075),Vector3(a.x,a.y,4.075),Vector3(b.x,b.y,4.075)]
+		for index in [0,1,2,1,3,2,2,1,0,2,3,1]: tool.add_vertex(points[index])
+	tool.generate_normals()
+	return tool.commit()
+
+static func crossed_tree() -> ArrayMesh:
+	var tool = SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for plane in range(3):
+		var basis = Basis(Vector3.UP,plane*PI/3)
+		var points = [Vector3(-.5,-.5,0),Vector3(.5,-.5,0),Vector3(-.5,.5,0),Vector3(.5,.5,0)]
+		var uvs = [Vector2(0,1),Vector2(1,1),Vector2(0,0),Vector2(1,0)]
+		for index in [0,1,2,1,3,2]:
+			tool.set_uv(uvs[index])
+			tool.add_vertex(basis*points[index])
+	tool.generate_normals()
+	return tool.commit()
+
+static func segment_transform(a: Vector3, b: Vector3) -> Transform3D:
+	var delta = b-a
+	# Scale the cylinder in its local Y axis before rotating it onto the span.
+	return Transform3D(Basis(Quaternion(Vector3.UP,delta.normalized()))*Basis.from_scale(Vector3(1,delta.length(),1)),(a+b)*.5)
+
+static func build(world: Node3D, length: float) -> void:
+	var markers: Array[Transform3D] = []
+	var reflectors: Array[Transform3D] = []
+	var stones: Array[Transform3D] = []
+	var bushes: Array[Transform3D] = []
+	var poles: Array[Transform3D] = []
+	var arms: Array[Transform3D] = []
+	var wires: Array[Transform3D] = []
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 9102
+	for s in range(0,int(length)+1,32):
+		if s%96==0 and not world.section_kind(s) in ["service","freight","bridge"]:
+			var origin = world.route.point(s,13)
+			origin.y = lerpf(origin.y-.06,world.land_height(origin),smoothstep(8.8,24,13.0))
+			var pole_basis = Basis(Vector3.UP,world.route.yaw(s))
+			poles.append(Transform3D(pole_basis,origin+Vector3.UP*3.5))
+			arms.append(Transform3D(pole_basis,origin+Vector3.UP*6.65))
+			if not world.mobile_quality and s+96<length and world.section_kind(s+96)==world.section_kind(s):
+				var next = world.route.point(s+96,13)
+				next.y = lerpf(next.y-.06,world.land_height(next),smoothstep(8.8,24,13.0))
+				for side in [-1,1]:
+					var a = origin+Vector3.UP*6.8+pole_basis.x*side*.85
+					var b = next+Vector3.UP*6.8+Basis(Vector3.UP,world.route.yaw(s+96)).x*side*.85
+					for part in range(4):
+						var t0 = part/4.0
+						var t1 = (part+1)/4.0
+						var p0 = a.lerp(b,t0)-Vector3.UP*sin(t0*PI)*.6
+						var p1 = a.lerp(b,t1)-Vector3.UP*sin(t1*PI)*.6
+						wires.append(segment_transform(p0,p1))
+		for side in [-1,1]:
+			var basis = Basis(Vector3.UP,world.route.yaw(s))
+			markers.append(Transform3D(basis,world.route.point(s,side*7.8)+Vector3.UP*.52))
+			reflectors.append(Transform3D(basis,world.route.point(s,side*7.8)+Vector3.UP*.92))
+			if world.section_kind(s) in ["service","freight","bridge"]: continue
+			if world.track.theme=="coast" and side<0: continue
+			for i in range(1 if world.mobile_quality else 3):
+				var lane = side*rng.randf_range(10.2,18.0)
+				var pos = world.route.point(s+rng.randf_range(-12,12),lane)
+				pos.y = lerpf(pos.y-.06,world.land_height(pos),smoothstep(8.8,24,absf(lane)))
+				var size = rng.randf_range(.25,.65)
+				stones.append(Transform3D(basis.scaled(Vector3(size*1.5,size*.6,size)),pos+Vector3.UP*size*.2))
+				if i==0:
+					var height = rng.randf_range(1.6,2.5)
+					bushes.append(Transform3D(basis.scaled(Vector3(height*1.5,height,height*1.5)),pos+Vector3.UP*height*.40))
+		await world.checkpoint(.90)
+	var marker = BoxMesh.new()
+	marker.size = Vector3(.12,1.04,.10)
+	world.multi(marker,markers,V.material(Color("cecbb8")),280)
+	var reflector = BoxMesh.new()
+	reflector.size = Vector3(.125,.13,.11)
+	world.multi(reflector,reflectors,V.material(Color("d8a452"),.12),280)
+	var stone = SphereMesh.new()
+	stone.radial_segments = 8
+	stone.rings = 4
+	stone.radius = .5
+	stone.height = 1.0
+	world.multi(stone,stones,V.material(Color("656559")),180)
+	var foliage = StandardMaterial3D.new()
+	foliage.albedo_texture = load("res://assets/textures/roadside_pine.png")
+	foliage.albedo_color = Color(.46,.57,.32)
+	foliage.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	foliage.alpha_scissor_threshold = .4
+	foliage.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	foliage.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	foliage.cull_mode = BaseMaterial3D.CULL_DISABLED
+	world.multi(crossed_tree(),bushes,foliage,180)
+	var pole = CylinderMesh.new()
+	pole.top_radius = .09
+	pole.bottom_radius = .14
+	pole.height = 7
+	pole.radial_segments = 8
+	world.multi(pole,poles,V.material(Color("544b39")),400)
+	var arm = BoxMesh.new()
+	arm.size = Vector3(2.2,.12,.14)
+	world.multi(arm,arms,V.material(Color("554c3e")),400)
+	var wire = CylinderMesh.new()
+	wire.top_radius = .012
+	wire.bottom_radius = .012
+	wire.height = 1
+	wire.radial_segments = 4
+	world.multi(wire,wires,V.material(Color("252b2c")),180)

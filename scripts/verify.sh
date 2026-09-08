@@ -18,6 +18,10 @@ run_checked work/verify-rules.log --headless --path "$ROOT" --script res://tests
 cat work/verify-rules.log
 run_checked work/verify-quality.log --headless --path "$ROOT" --script res://tests/render_quality.gd
 cat work/verify-quality.log
+run_checked work/verify-street-bike.log --headless --path "$ROOT" --script res://tests/street_bike.gd
+cat work/verify-street-bike.log
+run_checked work/verify-world-visuals.log --headless --path "$ROOT" --script res://tests/world_visuals.gd
+cat work/verify-world-visuals.log
 run_checked work/verify-core.log --headless --path "$ROOT" --script res://tests/core_v03.gd --fixed-fps 60
 cat work/verify-core.log
 run_checked work/verify-garage-burst.log --headless --path "$ROOT" --script res://tests/garage_burst.gd

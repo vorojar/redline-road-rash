@@ -100,7 +100,11 @@ func apply(actor: Node3D, t: float) -> void:
 			ankle = leg+(ankle-leg).limit_length(.842)
 			knee = bend(leg,ankle,.43,.42,Vector3(sign_value*.7,0,-1)).lerp(riding_knee,mount)
 			hand = hand.lerp(actor.riding_grip(sign_value),mount)
-			elbow = bend(arm,hand,.312,.281,Vector3(sign_value*.7,0,.4)).lerp(bend(arm,actor.riding_grip(sign_value),.312,.281,Vector3(sign_value*.8,-.5,.5)),mount)
+			hand = arm+(hand-arm).limit_length(.585)
+			# Blend the bend direction, then solve against the final hand position.
+			# Interpolating elbows solved for different targets stretches the forearm.
+			var elbow_hint = Vector3(sign_value*.7,0,.4).lerp(Vector3(sign_value*.8,-.5,.5),mount)
+			elbow = bend(arm,hand,.312,.281,elbow_hint)
 		actor.bone("upper_arm_"+suffix,arm,elbow)
 		actor.bone("forearm_"+suffix,elbow,hand)
 		actor.bone("thigh_"+suffix,leg,knee)

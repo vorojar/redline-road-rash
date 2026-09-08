@@ -10,11 +10,12 @@
       "handling": 5.0,
       "durability": 100.0,
       "color": "8b211a",
-      "model": "res://assets/models/motorcycle.glb",
-      "grip_height": 1.09,
-      "grip_forward": 0.51,
+      "model": "res://assets/models/ratchet.glb",
+      "grip_height": 1.262,
+      "grip_forward": 0.308,
       "wheelbase": 1.0,
-      "body_style": "NAKED / 经典街车"
+      "body_style": "STREET / 半整流街车",
+      "grip_width": 0.275
     },
     {
       "id": "revenant",
@@ -30,7 +31,8 @@
       "grip_height": 1.21,
       "grip_forward": 0.6,
       "wheelbase": 1.18,
-      "body_style": "MUSCLE / 长轴肌肉车"
+      "body_style": "MUSCLE / 长轴肌肉车",
+      "grip_width": 0.39
     },
     {
       "id": "phantom",
@@ -46,7 +48,8 @@
       "grip_height": 1.09,
       "grip_forward": 0.51,
       "wheelbase": 1.0,
-      "body_style": "SPORT / 全包围跑车"
+      "body_style": "SPORT / 全包围跑车",
+      "grip_width": 0.39
     }
   ],
   "tracks": [

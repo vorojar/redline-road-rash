@@ -10,7 +10,8 @@ func _initialize(): call_deferred("run")
 func run():
 	var actor = Actor.new()
 	root.add_child(actor)
-	actor.set_model({"id":"ratchet","grip_height":1.09,"grip_forward":.51,"wheelbase":1.0,"model":"res://assets/models/motorcycle.glb","color":"8b211a"})
+	var catalog = JSON.parse_string(FileAccess.get_file_as_string("res://data/catalog.json"))
+	actor.set_model(catalog.bikes[0])
 	for side in [-1,1]:
 		actor.set_combat(1,false,0,0)
 		actor.pose(0,0,0,0,.44,side,2)

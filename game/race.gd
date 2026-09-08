@@ -132,17 +132,17 @@ func build_environment() -> void:
 	sky.sky_material = material
 	env.environment.sky = sky
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.environment.ambient_light_color = Color("afbbbf")
-	env.environment.ambient_light_energy = .36
+	env.environment.ambient_light_color = Color("a5bdcf")
+	env.environment.ambient_light_energy = .42
 	env.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.environment.fog_enabled = true
-	env.environment.fog_light_color = Color("a2adb0")
-	env.environment.fog_density = .0007
+	env.environment.fog_light_color = Color("b5c6ce")
+	env.environment.fog_density = .00095
 	add_child(env)
 	sun = DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-42,-48,0)
-	sun.light_color = Color("fff1db")
-	sun.light_energy = .95
+	sun.rotation_degrees = Vector3(-34,-48,0)
+	sun.light_color = Color("ffe8c7")
+	sun.light_energy = 1.12
 	add_child(sun)
 
 func apply_render_quality() -> void:

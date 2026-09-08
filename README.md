@@ -90,7 +90,9 @@ python3 -m http.server 5033 --directory outputs/web
 | `web/` | 网页入口、加载状态和授权页 |
 | `tests/` | 隔离存档的规则和整场回归 |
 
-先用 `python3 scripts/build_surface_maps.py`（需要 Pillow）生成原创车辆 / 赛车服贴图。Blender 模型可由 `scripts/build_models.py`、`build_bike_variants.py`、`build_traffic.py` 重建；`scripts/build_rider.py` 也可单独重建骑手。贴图、GLB 与 `.blend` 均已入库，日常运行不需要 Blender。音频脚本 `scripts/build_audio.py` 需要 numpy 和 ffmpeg，原始音乐文件可从授权页下载；日常运行无需重新生成资源。
+先用 `python3 scripts/build_surface_maps.py`（需要 Pillow）生成原创车辆 / 赛车服贴图。RATCHET 使用 Silas6 的 CC-BY 4.0 街车模型，由 `scripts/import_street_bike.py` 从保留的源 GLB 重建；前后轮独立滚动和悬挂、贴图最高 1K，骑姿按实际握把适配。其他 Blender 模型可由 `scripts/build_models.py`、`build_bike_variants.py`、`build_traffic.py` 重建；`scripts/build_rider.py` 也可单独重建骑手。贴图、GLB 与 `.blend` 均已入库，日常运行不需要 Blender。音频脚本 `scripts/build_audio.py` 需要 numpy 和 ffmpeg，原始音乐文件可从授权页下载；日常运行无需重新生成资源。
+
+道路与地面使用共享的宏观颜色/磨损材质，远景贴图启用 mipmaps。植被采用近景交叉面、远景 billboard 和分区 MultiMesh；手机减少近景层次及电缆。轿车与独立箱式货车由 `scripts/build_traffic.py` 重建，车漆、玻璃、灯具和车身细节分别处理。护栏、反光柱、碎石灌木与电线杆由 `game/world/roadside_details.gd` 按赛道生成。
 
 ## 素材与授权
 
@@ -101,7 +103,8 @@ python3 -m http.server 5033 --directory outputs/web
 - 地面纹理：ambientCG（CC0）。
 - Noto Sans SC：SIL OFL 1.1。
 - Godot Engine：MIT。
-- 图标与树木图像由 AI 生成；人体基础网格和蒙皮权重来自 MakeHuman（CC0）；车辆、车手装备与涂装、程序动画及其余 Foley 为本项目制作。
+- RATCHET 摩托模型及基础贴图：Silas6 — Motorcycle（CC BY 4.0），经尺寸、轮组、贴图分辨率及运行材质适配。
+- 图标与树木图像由 AI 生成；人体基础网格和蒙皮权重来自 MakeHuman（CC0）；其余车辆、车手装备与原创涂装、程序动画及其余 Foley 为本项目制作。
 
 本项目与 Electronic Arts 或 Road Rash 官方无关联。
 

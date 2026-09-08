@@ -6,7 +6,8 @@ leather=mapped('Jacket leather','rider_suit',.61)
 limb=mapped('Suit limbs','rider_limb',.65)
 helm=mapped('Helmet','rider_helmet',.24,.18)
 trim=mat('Jacket seam',(.24,.26,.27),0,.65)
-glass=mat('Glass',(.015,.035,.048),.45,.12)
+glass=mat('Glass',(.022,.053,.072),.72,.095)
+armor=mat('Molded protectors',(.035,.042,.050),.04,.48)
 bones={'hips':((0,0,.93),(0,0,1.08)), 'spine':((0,0,1.06),(0,0,1.52)), 'head':((0,0,1.54),(0,0,1.91))}
 for side,x in [('L',-.21),('R',.21)]:
  bones['upper_arm_'+side]=((x,0,1.47),(x*1.14,0,1.16));bones['forearm_'+side]=((x*1.14,0,1.16),(x*1.2,0,.88));bones['thigh_'+side]=((-.13 if side=='L' else .13,0,.98),(-.1404 if side=='L' else .1404,0,.55));bones['shin_'+side]=((-.1404 if side=='L' else .1404,0,.55),(-.1456 if side=='L' else .1456,0,.13))
@@ -59,6 +60,45 @@ for obj in bpy.context.scene.objects:
    p=obj.matrix_world@vertex.co
    p.x*=.94;p.y*=.94;p.z=1.54+(p.z-1.54)*.86
    vertex.co=inverse@p
+# Tailor protectors to the actual skinned body, sharing its blended weights.
+# Surface patches avoid floating rigid shells when shoulders and knees flex.
+def fitted_protector(name,center,radius,material,depth):
+ center=Vector(center);radius=Vector(radius)
+ selected=[]
+ for face in body.data.polygons:
+  q=face.center-center
+  distance=sum((q[i]/radius[i])**2 for i in range(3))
+  if distance<1:selected.append(face)
+ indices=sorted({i for face in selected for i in face.vertices})
+ if not indices:raise RuntimeError('Empty fitted protector: '+name)
+ remap={old:new for new,old in enumerate(indices)}
+ verts=[]
+ for index in indices:
+  v=body.data.vertices[index];q=v.co-center
+  distance=min(1,sum((q[i]/radius[i])**2 for i in range(3)))
+  verts.append(v.co+v.normal*(.003+depth*(1-distance)))
+ mesh=bpy.data.meshes.new(name)
+ mesh.from_pydata(verts,[],[tuple(remap[i] for i in face.vertices) for face in selected]);mesh.update()
+ obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj);finish(obj,name,material)
+ uv=mesh.uv_layers.new(name='UVMap')
+ for new_face,old_face in zip(mesh.polygons,selected):
+  for new_loop,old_loop in zip(new_face.loop_indices,old_face.loop_indices):
+   uv.data[new_loop].uv=body.data.uv_layers.active.data[old_loop].uv
+ for group in body.vertex_groups:
+  vg=obj.vertex_groups.new(name=group.name)
+  for index in indices:
+   for influence in body.data.vertices[index].groups:
+    if influence.group==group.index:vg.add([remap[index]],influence.weight,'REPLACE')
+ bpy.ops.object.select_all(action='DESELECT');obj.select_set(True);bpy.context.view_layer.objects.active=obj
+ sub=obj.modifiers.new('Rounded protector boundary','SUBSURF');sub.levels=2;bpy.ops.object.modifier_apply(modifier=sub.name)
+ mod=obj.modifiers.new('Shared anatomical skinning','ARMATURE');mod.object=rig;obj.parent=rig
+ return obj
+fitted_protector('Tailored back hump',(0,-.075,1.415),(.105,.12,.10),leather,.022)
+for side,sign in [('L',-1),('R',1)]:
+ fitted_protector('Shoulder armor '+side,(sign*.24,0,1.44),(.085,.11,.072),armor,.009)
+ fitted_protector('Elbow reinforcement '+side,(sign*.24,-.045,1.18),(.063,.065,.065),armor,.006)
+ fitted_protector('Knee slider '+side,(sign*.14,.065,.575),(.073,.065,.062),armor,.012)
+ fitted_protector('Glove protection '+side,(sign*.25,-.018,.915),(.06,.05,.047),armor,.004)
 # Structured motorcycle boots cover the anatomical ankles with a toe box and cuff.
 for side in ['L','R']:
  x=-.1456 if side=='L' else .1456
@@ -68,7 +108,7 @@ for side in ['L','R']:
  loft('Boot cuff '+side,[(.14,.074,.083,0),(.20,.071,.078,0),(.28,.065,.068,0),(.32,.055,.057,0)],black,name,Vector((x,0,0)))
  bind(cube('Boot sole '+side,(x,.06,.039),(.15,.30,.022),black,.012),name)
 # Keep each material batched, preserving the weighted animation groups.
-for material in [leather,limb,helm,trim,black,steel,dark,seat,glass]:
+for material in [leather,limb,helm,trim,black,steel,dark,seat,glass,armor]:
  objects=[o for o in bpy.context.scene.objects if o.type=='MESH' and o.active_material==material and o!=body]
  if not objects:continue
  bpy.ops.object.select_all(action='DESELECT')

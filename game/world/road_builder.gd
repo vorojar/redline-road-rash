@@ -4,9 +4,9 @@ const V = preload("res://game/visuals.gd")
 var mobile_quality: bool = false
 var route: Path3D
 var track: Dictionary
-var asphalt: StandardMaterial3D
-var ground: StandardMaterial3D
-var roadside: StandardMaterial3D
+var asphalt: ShaderMaterial
+var ground: ShaderMaterial
+var roadside: ShaderMaterial
 var hazards: Array[Dictionary] = []
 var road_meshes: int = 0
 var paint_tool: SurfaceTool
@@ -25,10 +25,10 @@ func build(path: Path3D, data: Dictionary, gradual: bool = false) -> void:
 	slice_started = Time.get_ticks_usec()
 	route = path
 	track = data
-	asphalt = texture_material("res://assets/textures/asphalt/Asphalt010_1K-JPG_Color.jpg", "res://assets/textures/asphalt/Asphalt010_1K-JPG_NormalGL.jpg", Color(0.72,0.72,0.72))
-	ground = texture_material("res://assets/textures/ground/Ground037_1K-JPG_Color.jpg", "res://assets/textures/ground/Ground037_1K-JPG_NormalGL.jpg", Color(0.32,0.35,0.30))
+	asphalt = texture_material("res://assets/textures/asphalt/Asphalt010_1K-JPG_Color.jpg", "res://assets/textures/asphalt/Asphalt010_1K-JPG_NormalGL.jpg", 0)
+	ground = texture_material("res://assets/textures/ground/Ground037_1K-JPG_Color.jpg", "res://assets/textures/ground/Ground037_1K-JPG_NormalGL.jpg", 2)
 	roadside = ground.duplicate()
-	roadside.albedo_color = Color(0.44,0.40,0.32)
+	roadside.set_shader_parameter("surface_kind",1)
 	var length = float(track.length)
 	for section in range(-1, int(length / 100) + 3):
 		var from = section * 100.0
@@ -38,8 +38,8 @@ func build(path: Path3D, data: Dictionary, gradual: bool = false) -> void:
 			add_terrain(from, from + 100, side)
 		paint_tool = SurfaceTool.new()
 		paint_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-		var white = V.material(Color("c9c6af"))
-		var yellow = V.material(Color("ac963e"))
+		var white = V.material(Color("c9c6af").srgb_to_linear())
+		var yellow = V.material(Color("ac963e").srgb_to_linear())
 		for x in [-6.12,6.12]:
 			add_strip(from, from + 100, x - 0.045, x + 0.045, 0.017, white, false, 1)
 		for x in [-0.11,0.11]:
@@ -69,15 +69,12 @@ func build(path: Path3D, data: Dictionary, gradual: bool = false) -> void:
 		var sea = V.box(self, Vector3(2400,.05,6500), Vector3(-1050,-8,-1900), Color("27434b"))
 		sea.material_override.roughness = .24
 
-func texture_material(color_path: String, normal_path: String, tint: Color) -> StandardMaterial3D:
-	var m = StandardMaterial3D.new()
-	m.albedo_texture = load(color_path)
-	m.albedo_color = tint
-	m.normal_enabled = true
-	m.normal_texture = load(normal_path)
-	m.normal_scale = .65
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	m.roughness = .93
+func texture_material(color_path: String, normal_path: String, kind: int) -> ShaderMaterial:
+	var m = ShaderMaterial.new()
+	m.shader = preload("res://game/world/land_surface.gdshader")
+	m.set_shader_parameter("color_map",load(color_path))
+	m.set_shader_parameter("normal_map",load(normal_path))
+	m.set_shader_parameter("surface_kind",kind)
 	return m
 
 func add_strip(start: float, end: float, left: float, right: float, height: float, mat: Material, collide: bool, uv_scale: float) -> void:
@@ -197,7 +194,7 @@ func build_landscape(length: float) -> void:
 		add_child(mesh)
 		await checkpoint(.65+.1*float(first+4)/rows)
 
-func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: float) -> void:
+func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: float, near: float = 0.0) -> void:
 	# Split batches spatially so distant scenery is actually culled.
 	for offset in range(0,transforms.size(),40):
 		var node = MultiMeshInstance3D.new()
@@ -209,6 +206,8 @@ func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: 
 			mm.set_instance_transform(j,transforms[offset+j])
 		node.multimesh = mm
 		node.material_override = mat
+		node.visibility_range_begin = near
+		node.visibility_range_begin_margin = 20
 		node.visibility_range_end = distance
 		node.visibility_range_end_margin = 50
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -234,7 +233,7 @@ func build_props(length: float) -> void:
 				var pos = route.point(s+rng.randf_range(-3,3),lane)
 				var height = rng.randf_range(8,15)
 				pos.y = lerpf(pos.y-.06,land_height(pos),smoothstep(8.8,24,absf(lane)))+height*.5
-				var b = Basis.IDENTITY.scaled(Vector3(height*.65,height,1))
+				var b = Basis.IDENTITY.scaled(Vector3(height*.65,height,height*.65))
 				if not mobile_quality or (i%2==0 and k==0):
 					tree_transforms.append(Transform3D(b,pos))
 		await checkpoint(.78+.08*float(i+3)/(int(length/8)+14))
@@ -252,21 +251,26 @@ func build_props(length: float) -> void:
 		collider.transform = transform_value
 		rail_body.add_child(collider)
 		await checkpoint(.89)
-	var rail = BoxMesh.new()
-	rail.size = Vector3(.07,.26,8.15)
+	var rail = preload("res://game/world/roadside_details.gd").rail_mesh()
 	multi(rail,rail_transforms,V.material(Color("99988d"),.6),650)
 	var quad = QuadMesh.new()
 	quad.size = Vector2.ONE
 	var leaf = StandardMaterial3D.new()
 	leaf.albedo_texture = load("res://assets/textures/roadside_pine.png")
-	leaf.albedo_color = Color(.78,.80,.72)
+	leaf.albedo_color = Color(.68,.77,.59)
+	leaf.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	leaf.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	leaf.alpha_scissor_threshold = .45
 	leaf.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
 	leaf.billboard_keep_scale = true
 	leaf.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	leaf.cull_mode = BaseMaterial3D.CULL_DISABLED
-	multi(quad,tree_transforms,leaf,500 if mobile_quality else 850)
+	multi(quad,tree_transforms,leaf,500 if mobile_quality else 850,0 if mobile_quality else 175)
+	if not mobile_quality:
+		var near_leaf = leaf.duplicate()
+		near_leaf.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
+		multi(preload("res://game/world/roadside_details.gd").crossed_tree(),tree_transforms,near_leaf,195)
+	await preload("res://game/world/roadside_details.gd").build(self,length)
 	for s in range(110,int(length),36):
 		var curve = route.curvature(float(s))
 		if absf(curve)>.009:
@@ -281,13 +285,16 @@ func sign_board(s: float, words: String, color: Color, lane: float, width: float
 	root.position = route.point(s,lane)
 	root.rotation.y = route.yaw(s)
 	V.box(root,Vector3(.08,3.8,.08),Vector3(0,1.9,0),Color("8b8a80"))
-	V.box(root,Vector3(width,1.25,.09),Vector3(0,3.6,0),color)
+	V.box(root,Vector3(width,1.25,.09),Vector3(0,3.6,0),color.srgb_to_linear())
 	var label = Label3D.new()
 	label.font = load("res://assets/fonts/RedlineUI.ttf")
 	label.text = words
 	label.font_size = 60
-	label.pixel_size = .008
-	label.modulate = Color("e7e2cc")
+	var text_width = 1.0
+	for line in words.split("\n"):
+		text_width = maxf(text_width,label.font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,label.font_size).x)
+	label.pixel_size = minf(.008,width*.88/text_width)
+	label.modulate = Color("242723") if color.r>color.b*1.5 else Color("e7e2cc")
 	label.outline_size = 0
 	label.position = Vector3(0,3.6,.06)
 	root.add_child(label)
@@ -345,9 +352,7 @@ func build_corridor_landscape(length: float) -> void:
 			var mesh=MeshInstance3D.new()
 			mesh.mesh=tool.commit();mesh.material_override=ground
 			mesh.visibility_range_end=1000
-			# The two sides have opposite winding; these distant hills need both faces.
-			mesh.material_override=ground.duplicate()
-			mesh.material_override.cull_mode=BaseMaterial3D.CULL_DISABLED
+			# The terrain shader renders both corridor sides.
 			add_child(mesh)
 		await checkpoint(.55+.2*float(start+200)/(length+300))
 

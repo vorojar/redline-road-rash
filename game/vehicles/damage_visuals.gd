@@ -13,6 +13,11 @@ static func paint_material(source: StandardMaterial3D, color: Color) -> ShaderMa
 	mat.set_shader_parameter("normal_map",source.normal_texture)
 	mat.set_shader_parameter("roughness_map",source.roughness_texture)
 	mat.set_shader_parameter("roughness_channel",source.roughness_texture_channel)
+	mat.set_shader_parameter("tint_warm_colors",source.resource_name=="StreetPaint")
+	mat.set_shader_parameter("has_metallic_map",source.metallic_texture!=null)
+	mat.set_shader_parameter("metallic_map",source.metallic_texture)
+	mat.set_shader_parameter("metallic_channel",source.metallic_texture_channel)
+	mat.set_shader_parameter("metallic_factor",source.metallic)
 	return mat
 
 func attach(actor: Node3D) -> void:

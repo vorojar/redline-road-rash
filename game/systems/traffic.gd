@@ -2,13 +2,14 @@ extends RefCounted
 const Driver = preload("res://game/systems/traffic_driver.gd")
 const V = preload("res://game/visuals.gd")
 const SEDAN = preload("res://assets/models/sedan.glb")
+const TRUCK = preload("res://assets/models/truck.glb")
 
 static func vehicle(color: Color, truck: bool = false, police: bool = false) -> Node3D:
-	var car = SEDAN.instantiate()
+	var car = (TRUCK if truck else SEDAN).instantiate()
 	for mesh in car.find_children("*","MeshInstance3D",true,false):
 		if mesh.name == "Paint":
 			var mat = mesh.mesh.surface_get_material(0).duplicate()
-			mat.albedo_color = color
+			mat.albedo_color = color.srgb_to_linear()
 			mesh.material_override = mat
 	if police:
 		V.box(car,Vector3(.5,.16,.28),Vector3(-.28,1.7,0),Color("c52223"))
@@ -27,16 +28,6 @@ static func vehicle(color: Color, truck: bool = false, police: bool = false) -> 
 		group.visible=false
 		lamps[side]=group
 	car.set_meta("lamps",lamps)
-	# Rounded trim, mirrors and bumpers give the traffic recognizable road proportions.
-	for z in [-2.03,2.03]:
-		V.box(car,Vector3(1.8,.13,.1),Vector3(0,.45,z),Color("737b7b"))
-	for x in [-1,1]:
-		V.box(car,Vector3(.21,.13,.21),Vector3(x,1.23,-.58),color)
-	if truck:
-		V.box(car,Vector3(2.15,2.35,5),Vector3(0,1.85,1.4),Color("b4b09d"))
-		for x in [-1.08,1.08]:
-			for z in range(-8,36,4):
-				V.box(car,Vector3(.025,2.2,.025),Vector3(x,1.85,z*.1),Color("8a897b"))
 	var solid=StaticBody3D.new()
 	solid.name="VehicleSolid"
 	solid.collision_layer=8; solid.collision_mask=4
