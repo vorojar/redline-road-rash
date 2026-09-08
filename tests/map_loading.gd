@@ -48,6 +48,16 @@ func run() -> void:
 		print("MAP_SWITCH index=",index," ms=",Time.get_ticks_msec()-begin)
 	check(race.world==long_world and race.world_cache.size()==3,"往返切图复用原地图，缓存不随切换次数增长")
 	check(not race.world.hazards[0].hit and race.world.hazards[0].node.rotation==Vector3.ZERO,"缓存重新进入时重置路障状态")
+	for entry in race.world_cache.values():
+		var world = entry.world
+		var signs = world.find_children("EHAFO *","Node3D",false,false)
+		var distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length))
+		check(signs.size()==4 and distances.size()==4,"每条赛道有四块 EHAFO 广告牌："+world.track.id)
+		for i in range(signs.size()):
+			var s: float = distances[i]
+			var right = Basis(Vector3.UP,world.route.yaw(s)).x
+			var lane = (signs[i].position-world.route.point(s)).dot(right)
+			check(lane-2.5>8.8 and world.section_kind(s) not in ["service","freight","bridge"],"广告牌在路肩外且避开特殊区域："+world.track.id)
 	var active = 0
 	for entry in race.world_cache.values():
 		if entry.world.is_inside_tree(): active += 1
