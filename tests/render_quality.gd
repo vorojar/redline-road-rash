@@ -101,6 +101,10 @@ func run() -> void:
 				check(material.get_shader_parameter("color_map")==source.albedo_texture and source.albedo_texture.get_width()>=512,"人物换色保留真实贴图："+source.resource_name)
 				check(material.get_shader_parameter("normal_map")==source.normal_texture and source.normal_enabled,"法线细节接入："+source.resource_name)
 				check(material.get_shader_parameter("roughness_channel")==source.roughness_texture_channel,"粗糙度读取导入后的正确通道")
+				if source.resource_name in ["Jacket leather","Suit limbs"]:
+					check(material.get_shader_parameter("sponsor_layout")== (1 if source.resource_name=="Jacket leather" else 2),"胸背与袖腿分别采用对应贴标布局："+source.resource_name)
+					check(material.get_shader_parameter("sponsor_sheet").resource_path=="res://assets/textures/sponsors/brand-sheet.png" and material.get_shader_parameter("ehafo_patch").resource_path=="res://assets/textures/sponsors/ehafo.png","原图品牌与 EHAFO 贴标保持独立于队伍颜色贴图")
+					check(material.get_shader_parameter("sponsor_sheet").get_image().has_mipmaps() and material.get_shader_parameter("ehafo_patch").get_image().has_mipmaps(),"广告贴标具备 mipmaps，远景缩小时避免闪烁")
 			elif source.resource_name != "Racing helmet":
 				check(mesh.get_active_material(surface) is StandardMaterial3D,"面罩及金属保留独立 PBR 材质："+source.resource_name)
 

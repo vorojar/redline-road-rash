@@ -113,6 +113,9 @@ func style_rider(jacket: Color, helmet_pattern: int = 0) -> void:
 			material.set_shader_parameter("roughness_map",source.roughness_texture)
 			material.set_shader_parameter("roughness_channel",source.roughness_texture_channel)
 			material.set_shader_parameter("metal",source.metallic)
+			material.set_shader_parameter("sponsor_layout",1 if material_name=="Jacket leather" else 2 if material_name=="Suit limbs" else 0)
+			material.set_shader_parameter("sponsor_sheet",preload("res://assets/textures/sponsors/brand-sheet.png"))
+			material.set_shader_parameter("ehafo_patch",preload("res://assets/textures/sponsors/ehafo.png"))
 			mesh.set_surface_override_material(surface,material)
 
 func set_model(spec: Dictionary) -> void:

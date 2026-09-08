@@ -40,3 +40,6 @@ Web 字体：`fonts/RedlineUI.ttf` 为 Noto Sans SC 的字形子集，由 `scrip
 RATCHET 街车：`models/ratchet.glb` 改编自 [Motorcycle](https://sketchfab.com/3d-models/motorcycle-693e83d86e1e4e5b95e4314dbdd95d40)，作者 [Silas6](https://sketchfab.com/Silas6)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。2026-09-08 从 Sketchfab 官方免费下载原始 GLB，保存在 `models/source/silas6/motorcycle.glb`。修改包括轴距/尺寸适配、保持圆形轮胎的轮组拆分、贴图降至最高 1K、握把接触位置，以及运行时车漆换色和车损。原始几何和贴图归属 Silas6；不暗示作者为本项目背书。可用 `scripts/import_street_bike.py` 从保留的源 GLB 重建。许可证全文附 `CC-BY-4.0.txt`。
 
 骑手全盔：改编自 [motorcycle HELMET](https://sketchfab.com/3d-models/motorcycle-helmet-1d489db9cdc24161a7537926a20bb17b)，作者 [djengala](https://sketchfab.com/djengala)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。原始 GLB 保存在 `models/source/djengala/helmet.glb`；`scripts/build_rider.py` 调整尺寸和朝向、绑定头部骨骼、适配外壳 PBR 并将透明镜片改为不透明烟蓝镜面。运行时颜色跟随赛车服，另加入五种程序条纹/棋盘涂装；原始外壳、内衬和源涂装归属作者；不暗示作者背书。许可证全文附 `CC-BY-4.0.txt`。
+
+
+赛车服广告贴标：`textures/sponsors/brand-sheet.png` 为用户提供的品牌参考图，运行时按原图区域显示 MOTUL、SHOEI、NGK、brembo 和 Red Bull 标识，未重绘这些标识。第三方商标及图形权利归各自权利人，不属于项目原创或 CC0 素材；游戏内装饰不表示实际赞助或背书。`textures/sponsors/ehafo.png` 为根据用户指定文字 EHAFO 通过 imagegen 生成的主标。贴标共用原赛车服 UV 和蒙皮，不改变基础模型或动画。
