@@ -18,6 +18,8 @@ run_checked work/verify-rules.log --headless --path "$ROOT" --script res://tests
 cat work/verify-rules.log
 run_checked work/verify-quality.log --headless --path "$ROOT" --script res://tests/render_quality.gd
 cat work/verify-quality.log
+run_checked work/verify-seated-pose.log --headless --path "$ROOT" --script res://tests/seated_pose.gd
+cat work/verify-seated-pose.log
 run_checked work/verify-street-bike.log --headless --path "$ROOT" --script res://tests/street_bike.gd
 cat work/verify-street-bike.log
 run_checked work/verify-world-visuals.log --headless --path "$ROOT" --script res://tests/world_visuals.gd

@@ -92,13 +92,29 @@ for i in used:
  if total<=0:raise RuntimeError('Unweighted anatomical vertex '+str(i))
  weights[i]={k:v/total for k,v in weights[i].items()}
  vertices.append(sum((fitted(raw[i],key)*value for key,value in weights[i].items()),Vector()))
+# A padded racing-pants seat has a flatter silhouette than the bare anatomical body.
+# Keep this posterior panel on the pelvis; thigh flexion must not pull it into lobes.
+def smooth_range(a,b,value):
+ t=max(0,min(1,(value-a)/(b-a)))
+ return t*t*(3-2*t)
+for point,source_index in zip(vertices,used):
+ w=weights[source_index]
+ if sum(value for key,value in w.items() if key in ['hips','spine','thigh_L','thigh_R'])<.98:continue
+ coverage=smooth_range(.865,.95,point.z)*(1-smooth_range(1.065,1.16,point.z))
+ coverage*=1-smooth_range(.15,.215,abs(point.x))
+ coverage*=smooth_range(.008,.035,-point.y)
+ point.y=point.y*(1-coverage)-.074*coverage
+ weights[source_index]={key:value*(1-coverage) for key,value in w.items()}
+ weights[source_index]['hips']=weights[source_index].get('hips',0)+coverage*.9
+ weights[source_index]['spine']=weights[source_index].get('spine',0)+coverage*.1
 mesh=bpy.data.meshes.new('Continuous anatomical topology');mesh.from_pydata(vertices,[],[tuple(remap[i] for i in reversed(f)) for f in source_faces]);mesh.update()
 body=bpy.data.objects.new('Continuous racing suit',mesh);bpy.context.collection.objects.link(body)
 # Clothing allowance preserves anatomical shoulders / trapezius while covering skin.
 for vertex in mesh.vertices:
  vertex.co+=vertex.normal*(.010 if vertex.co.z<1.54 else .002)
 mesh.update()
-for material in [leather,limb,black]:mesh.materials.append(material)
+seat_panel=mat('Seat reinforcement',(.012,.014,.018),0,.86)
+for material in [leather,limb,black,seat_panel]:mesh.materials.append(material)
 uv=mesh.uv_layers.new(name='UVMap')
 for polygon in mesh.polygons:
  center=polygon.center;influences=defaultdict(float)
@@ -111,6 +127,8 @@ for polygon in mesh.polygons:
   polygon.material_index=2
  elif key.startswith('forearm') and (center-Vector(bones[key][0])).length>.25:
   polygon.material_index=2
+ elif key in ['hips','spine','thigh_L','thigh_R'] and .84<center.z<1.125 and center.y<-.025 and abs(center.x)<.205:
+  polygon.material_index=3
  else:polygon.material_index=1 if is_limb else 0
  coords=[]
  for loop in polygon.loop_indices:

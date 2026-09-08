@@ -57,7 +57,8 @@ func apply(actor: Node3D, t: float) -> void:
 	hip = hip.lerp(anchors[0],mount)
 	shoulder = shoulder.lerp(anchors[1],mount)
 	head = head.lerp(anchors[2],mount)
-	actor.bone("hips",hip,hip+Vector3(0,.15,0))
+	var pelvis_axis = Vector3.UP.slerp(actor.riding_pelvis_axis(anchors[0],anchors[1]).normalized(),mount)*actor.LENGTHS.hips
+	actor.bone("hips",hip,hip+pelvis_axis)
 	actor.bone("spine",hip+Vector3(0,.06,-.04),shoulder)
 	actor.bone("head",head,head+Vector3(0,.33,-.04))
 	for sign_value in [-1,1]:

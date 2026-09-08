@@ -303,7 +303,7 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 		var recoil = sin(clampf(stagger/.6,0,1)*PI)
 		shoulder += Vector3(-side*.13*recoil,-.055*recoil,.09*recoil)
 		head_start += Vector3(-side*.17*recoil,-.08*recoil,.10*recoil)
-	bone("hips",hip,hip+Vector3(0,.15,0))
+	bone("hips",hip,hip+riding_pelvis_axis(hip,shoulder))
 	bone("spine",hip+Vector3(0,.06,-.04),shoulder,twist)
 	bone("head",head_start,head_start+Vector3(0,.33,-.04))
 	for sign_value in [-1,1]:
@@ -358,7 +358,11 @@ func pose(time: float, lean: float, slope: float, crash_time: float, attack: flo
 
 func riding_anchors(lean: float = 0) -> Array[Vector3]:
 	var tuck = smoothstep(8,55,ride_speed)*lerpf(.70,1.0,sport_tuck)
-	var hip = Vector3(-lean*.065,.965,.29+tuck*.045)
+	var hip = Vector3(-lean*.065,.94,.29+tuck*.045)
 	var shoulder = Vector3(-lean*.16,lerpf(1.36,1.17,tuck),lerpf(-.04,-.15,tuck))
 	var head = shoulder+Vector3(0,-.005,-.065)
 	return [hip,shoulder,head]
+
+func riding_pelvis_axis(hip: Vector3, shoulder: Vector3) -> Vector3:
+	# A seated pelvis tips forward with the torso instead of staying bolt upright.
+	return Vector3.UP.slerp((shoulder-hip).normalized(),.35)*LENGTHS.hips
