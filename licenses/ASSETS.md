@@ -35,3 +35,6 @@ Web 字体：`fonts/RedlineUI.ttf` 为 Noto Sans SC 的字形子集，由 `scrip
 
 
 网页首页封面：使用内置 imagegen 生成的原创公路摩托竞速主题图。原始 PNG 保存在 `branding/source/title-road.png`，网页 WebP 为 `web/title-road.webp`，生成提示词保存在 `branding/source/title-road-prompt.txt`。这是首页宣传插画，不是游戏运行截图。
+
+
+RATCHET 街车：`models/ratchet.glb` 改编自 [Motorcycle](https://sketchfab.com/3d-models/motorcycle-693e83d86e1e4e5b95e4314dbdd95d40)，作者 [Silas6](https://sketchfab.com/Silas6)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。2026-09-08 从 Sketchfab 官方免费下载原始 GLB，保存在 `models/source/silas6/motorcycle.glb`。修改包括轴距/尺寸适配、保持圆形轮胎的轮组拆分、贴图降至最高 1K、握把接触位置，以及运行时车漆换色和车损。原始几何和贴图归属 Silas6；不暗示作者为本项目背书。可用 `scripts/import_street_bike.py` 从保留的源 GLB 重建。许可证全文附 `CC-BY-4.0.txt`。
