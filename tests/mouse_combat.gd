@@ -73,6 +73,28 @@ func run():
 	root.push_input(routed)
 	await process_frame
 	check(race.pending_attack>0 and race.pending_kind==2,"完整 Viewport 鼠标事件穿过 GUI 路由触发挥棍")
+	var space=InputEventKey.new()
+	space.physical_keycode=KEY_SPACE; space.keycode=KEY_SPACE; space.pressed=true
+	ready_attack(); race.player.weapon=0; race.primary_punch=true
+	for opponent in race.racers: opponent.s=1000
+	var cruise_before: bool=race.cruise
+	root.push_input(space)
+	check(race.pending_attack>0 and race.pending_kind==0 and race.cruise==cruise_before,"完整 Viewport 空格出拳且不切换定速")
+	ready_attack(); space.echo=true; root.push_input(space)
+	check(race.pending_attack==0 and not race.primary_punch,"长按空格重复事件不连击或跳过拳脚")
+	space.echo=false; space.pressed=false; root.push_input(space)
+	check(race.pending_attack==0,"松开空格不攻击")
+	space.pressed=true; root.push_input(space)
+	check(race.pending_attack>0 and race.pending_kind==1,"再次空格交替踢击")
+	ready_attack(); race.player.weapon=2; root.push_input(space)
+	check(race.pending_attack>0 and race.pending_kind==2,"空格持械挥击")
+	ready_attack(); race.player.weapon=0; race.player.stamina=100
+	r.s=race.player.distance; r.lane=race.player.lane; r.weapon=1; r.windup=.4
+	root.push_input(space)
+	check(race.player.weapon==1 and r.weapon==0 and race.pending_attack==0,"空格与左键一样优先夺械")
+	for mode in ["ready","paused","garage","settings","countdown","finished"]:
+		race.mode=mode; ready_attack(); root.push_input(space)
+		check(race.pending_attack==0,mode+" 界面空格不攻击")
 	race.sound.stop_all(); race.queue_free()
 	await process_frame
 	print("MOUSE_COMBAT_RESULT: %d checks, %d failures" % [checks,failures])

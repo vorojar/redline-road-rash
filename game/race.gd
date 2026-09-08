@@ -381,6 +381,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if mode == "racing":
 		if event.is_action_pressed("cruise"):
 			cruise = not cruise
+		if event.is_action_pressed("primary_attack"): primary_attack(true)
 		if event.is_action_pressed("punch"): attack(0)
 		if event.is_action_pressed("kick"): attack(1)
 		if event.is_action_pressed("club"): attack(2)

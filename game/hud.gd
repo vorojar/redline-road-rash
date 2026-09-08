@@ -104,13 +104,13 @@ func rebind(key: int) -> void:
 	if key == KEY_ESCAPE:
 		waiting_action = ""
 		return
-	if key in [KEY_ENTER,KEY_R,KEY_M,KEY_F3,KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT]:
-		race.notify("该按键保留给菜单或方向键，请选其他键。",3)
+	if key in [KEY_ENTER,KEY_R,KEY_M,KEY_F3] or key in Controls.FIXED_KEYS:
+		race.notify("该按键保留给菜单、方向或攻击，请选其他键。",3)
 		return
 	var bindings: Dictionary = race.career.settings.bindings
-	var old = int(bindings.get(waiting_action,Controls.KEYS[waiting_action]))
+	var old = Controls.binding_key(waiting_action,bindings)
 	for action in Controls.LABELS:
-		if action != waiting_action and int(bindings.get(action,Controls.KEYS[action])) == key:
+		if action != waiting_action and Controls.binding_key(action,bindings) == key:
 			bindings[action] = old
 	bindings[waiting_action] = key
 	Controls.setup(bindings)
@@ -216,7 +216,7 @@ func draw_menu() -> void:
 		button(Rect2(73,621,197,48),"车库 / GARAGE",func(): race.menu_action("garage"))
 		button(Rect2(284,621,197,48),"驾驶设置",func(): race.menu_action("settings"))
 		button(Rect2(73,683,408,48),"教学练习 · 不计奖金",func(): race.start(true))
-		text("WASD 驾驶  ·  J K L 攻击  ·  SHIFT 蓄力",73,754,14,faded)
+		text("WASD / 方向键驾驶 · 空格攻击 · SHIFT 蓄力",73,754,14,faded)
 		text(race.track.subtitle,875,668,21,gold,true)
 		text(race.career.bike().name,875,710,30,cream,true)
 		text("%d km/h   ·   %s" % [int(race.player.top_speed*3.6),race.difficulty().name],875,744,18,cream)
@@ -385,7 +385,7 @@ func draw_overlay() -> void:
 	panel(Rect2(410,150,620,505))
 	text("PAUSED",450,221,49,cream,true)
 	text("比赛已暂停",450,269,22,gold)
-	text("WASD / 方向键 驾驶   左键 / J K L 攻击",450,330,21)
-	text("刹车会取消定速油门。",450,375,19,faded)
+	text("WASD / 方向键 / 小键盘 8246 驾驶",450,330,21)
+	text("左键 / 空格攻击；刹车会取消定速油门。",450,375,19,faded)
 	button(Rect2(450,480,540,56),"继续比赛 / ESC",func(): race.menu_action("resume"),true)
 	button(Rect2(450,552,540,51),"返回赛事 / 车库",func(): race.menu_action("home"))
