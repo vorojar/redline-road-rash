@@ -50,32 +50,29 @@ static func sponsor_distances(world: Node3D, length: float, openai: bool = false
 static func sponsor_board(openai: bool = false) -> Node3D:
 	var board = Node3D.new()
 	board.name = "OpenAI Billboard" if openai else "EHAFO Billboard"
-	if openai:
-		# Highway-scale monopole, rear steelwork and maintenance catwalk.
-		V.box(board,Vector3(2.2,.6,2.2),Vector3(0,.3,0),Color("777b77"))
-		V.cylinder(board,.48,6.4,Vector3(0,3.2,0),Color("636b6c"))
-		V.box(board,Vector3(12.4,4.4,.38),Vector3(0,8.6,0),Color("333b40"))
-		for x in [-5.6,-2.8,0,2.8,5.6]:
-			V.box(board,Vector3(.15,4.2,.3),Vector3(x,8.6,-.38),Color("687176"))
-		for y in [6.65,8.6,10.55]:
-			V.box(board,Vector3(12.1,.16,.3),Vector3(0,y,-.42),Color("687176"))
-		V.box(board,Vector3(12.8,.16,1.25),Vector3(0,5.45,.2),Color("51595d"))
-		for x in [-6.3,-4.2,-2.1,0,2.1,4.2,6.3]:
-			V.box(board,Vector3(.055,.8,.055),Vector3(x,5.9,.8),Color("6c7477"))
-		V.box(board,Vector3(12.65,.055,.055),Vector3(0,6.3,.8),Color("6c7477"))
-	else:
-		for x in [-1.8,1.8]:
-			V.box(board,Vector3(.12,3.6,.12),Vector3(x,1.8,0),Color("62665e"))
-		V.box(board,Vector3(5.0,1.8,.16),Vector3(0,3.5,0),Color("252b29"))
+	var face_height = 4.0 if openai else 12.0*809/1942
+	var center_y = 6.6+face_height*.5
+	# Highway-scale monopole, rear steelwork and maintenance catwalk.
+	V.box(board,Vector3(2.2,.6,2.2),Vector3(0,.3,0),Color("777b77"))
+	V.cylinder(board,.48,6.4,Vector3(0,3.2,0),Color("636b6c"))
+	V.box(board,Vector3(12.4,face_height+.4,.38),Vector3(0,center_y,0),Color("333b40"))
+	for x in [-5.6,-2.8,0,2.8,5.6]:
+		V.box(board,Vector3(.15,face_height+.2,.3),Vector3(x,center_y,-.38),Color("687176"))
+	for y in [6.65,center_y,center_y+face_height*.5-.05]:
+		V.box(board,Vector3(12.1,.16,.3),Vector3(0,y,-.42),Color("687176"))
+	V.box(board,Vector3(12.8,.16,1.25),Vector3(0,5.45,.2),Color("51595d"))
+	for x in [-6.3,-4.2,-2.1,0,2.1,4.2,6.3]:
+		V.box(board,Vector3(.055,.8,.055),Vector3(x,5.9,.8),Color("6c7477"))
+	V.box(board,Vector3(12.65,.055,.055),Vector3(0,6.3,.8),Color("6c7477"))
 	var face = MeshInstance3D.new()
 	face.name = "Sponsor Face"
 	var quad = QuadMesh.new()
-	quad.size = Vector2(12,4) if openai else Vector2(4.8,1.6)
+	quad.size = Vector2(12,face_height)
 	face.mesh = quad
-	face.position = Vector3(0,8.6,.2) if openai else Vector3(0,3.5,.085)
+	face.position = Vector3(0,center_y,.2)
 	face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material = StandardMaterial3D.new()
-	material.albedo_texture = preload("res://assets/textures/sponsors/openai.png") if openai else preload("res://assets/textures/sponsors/ehafo.png")
+	material.albedo_texture = preload("res://assets/textures/sponsors/openai.png") if openai else preload("res://assets/textures/sponsors/ehafo_medical.png")
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	face.material_override = material
@@ -88,7 +85,7 @@ static func build(world: Node3D, length: float) -> void:
 			var board = sponsor_board(openai)
 			board.name = ("%s %d" % ["OpenAI" if openai else "EHAFO",roundi(s)])
 			world.add_child(board)
-			var lane = 17.0 if openai else 11.8
+			var lane = 17.0
 			board.position = world.route.point(s,lane)
 			board.position.y = lerpf(board.position.y-.06,world.land_height(board.position),smoothstep(8.8,24,lane))
 			board.rotation.y = world.route.yaw(s)

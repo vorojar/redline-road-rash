@@ -57,7 +57,7 @@ func run() -> void:
 			var s: float = distances[i]
 			var right = Basis(Vector3.UP,world.route.yaw(s)).x
 			var lane = (signs[i].position-world.route.point(s)).dot(right)
-			check(lane-2.5>8.8 and world.section_kind(s) not in ["service","freight","bridge"],"广告牌在路肩外且避开特殊区域："+world.track.id)
+			check(lane-6.4>8.8 and world.section_kind(s) not in ["service","freight","bridge"],"广告牌在路肩外且避开特殊区域："+world.track.id)
 		var openai_signs = world.find_children("OpenAI *","Node3D",false,false)
 		var openai_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length),true)
 		check(openai_signs.size()==2 and openai_distances.size()==2,"每条赛道新增两块 OpenAI 广告牌："+world.track.id)
