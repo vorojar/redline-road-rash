@@ -32,25 +32,35 @@ static func segment_transform(a: Vector3, b: Vector3) -> Transform3D:
 	# Scale the cylinder in its local Y axis before rotating it onto the span.
 	return Transform3D(Basis(Quaternion(Vector3.UP,delta.normalized()))*Basis.from_scale(Vector3(1,delta.length(),1)),(a+b)*.5)
 
-static func sponsor_distances(world: Node3D, length: float, openai: bool = false) -> PackedFloat32Array:
+static func sponsor_distances(world: Node3D, length: float, openai: bool = false, leosto: bool = false) -> PackedFloat32Array:
 	var distances = PackedFloat32Array()
-	for anchor in ([length*.15,length*.71] if openai else [220.0,length*.32,length*.58,length*.84]):
+	var occupied = PackedFloat32Array()
+	if leosto:
+		occupied.append_array(sponsor_distances(world,length))
+		occupied.append_array(sponsor_distances(world,length,true))
+	var anchors = [length*.23,length*.46,length*.93] if leosto else ([length*.15,length*.71] if openai else [220.0,length*.32,length*.58,length*.84])
+	for anchor in anchors:
 		var found = false
 		for step in range(ceili(length/40)):
 			for side in [-1,1]:
 				var s: float = anchor+step*40*side
+				var too_close = false
+				for other in occupied:
+					if absf(s-other)<100: too_close = true
+				if too_close: continue
 				if s>60 and s<length-60 and world.section_kind(s) not in ["service","freight","bridge"]:
 					distances.append(s)
+					if leosto: occupied.append(s)
 					found = true
 					break
 			if found: break
 		assert(found,"Sponsor billboard needs an ordinary roadside section")
 	return distances
 
-static func sponsor_board(openai: bool = false) -> Node3D:
+static func sponsor_board(openai: bool = false, leosto: bool = false) -> Node3D:
 	var board = Node3D.new()
-	board.name = "OpenAI Billboard" if openai else "EHAFO Billboard"
-	var face_height = 4.0 if openai else 12.0*809/1942
+	board.name = "LEOSTO Billboard" if leosto else ("OpenAI Billboard" if openai else "EHAFO Billboard")
+	var face_height = 5.0 if leosto else (4.0 if openai else 12.0*809/1942)
 	var center_y = 6.6+face_height*.5
 	# Highway-scale monopole, rear steelwork and maintenance catwalk.
 	V.box(board,Vector3(2.2,.6,2.2),Vector3(0,.3,0),Color("777b77"))
@@ -72,7 +82,7 @@ static func sponsor_board(openai: bool = false) -> Node3D:
 	face.position = Vector3(0,center_y,.2)
 	face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material = StandardMaterial3D.new()
-	material.albedo_texture = preload("res://assets/textures/sponsors/openai.png") if openai else preload("res://assets/textures/sponsors/ehafo_medical.png")
+	material.albedo_texture = preload("res://assets/textures/sponsors/leosto.png") if leosto else (preload("res://assets/textures/sponsors/openai.png") if openai else preload("res://assets/textures/sponsors/ehafo_medical.png"))
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	face.material_override = material
@@ -80,10 +90,10 @@ static func sponsor_board(openai: bool = false) -> Node3D:
 	return board
 
 static func build(world: Node3D, length: float) -> void:
-	for openai in [false,true]:
-		for s in sponsor_distances(world,length,openai):
-			var board = sponsor_board(openai)
-			board.name = ("%s %d" % ["OpenAI" if openai else "EHAFO",roundi(s)])
+	for brand in ["EHAFO","OpenAI","LEOSTO"]:
+		for s in sponsor_distances(world,length,brand=="OpenAI",brand=="LEOSTO"):
+			var board = sponsor_board(brand=="OpenAI",brand=="LEOSTO")
+			board.name = ("%s %d" % [brand,roundi(s)])
 			world.add_child(board)
 			var lane = 17.0
 			board.position = world.route.point(s,lane)

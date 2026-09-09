@@ -216,6 +216,7 @@ func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: 
 func build_props(length: float) -> void:
 	var billboard_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(self,length,true)
 	billboard_distances.append_array(preload("res://game/world/roadside_details.gd").sponsor_distances(self,length))
+	billboard_distances.append_array(preload("res://game/world/roadside_details.gd").sponsor_distances(self,length,false,true))
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 329 if track.id == "pine" else 827
 	var tree_transforms: Array[Transform3D] = []

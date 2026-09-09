@@ -67,6 +67,17 @@ func run() -> void:
 			check(is_equal_approx(openai_signs[i].rotation.y,world.route.yaw(s)),"OpenAI 广告面朝来车："+world.track.id)
 			for other in distances:
 				check(absf(s-other)>40,"OpenAI 与现有广告牌错开："+world.track.id)
+		var leosto_signs = world.find_children("LEOSTO *","Node3D",false,false)
+		var leosto_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length),false,true)
+		check(leosto_signs.size()==3 and leosto_distances.size()==3,"每条赛道新增三块 LEOSTO 大牌："+world.track.id)
+		var occupied = distances.duplicate()
+		occupied.append_array(openai_distances)
+		for i in range(leosto_signs.size()):
+			var s: float = leosto_distances[i]
+			check(world.section_kind(s) not in ["service","freight","bridge"] and (leosto_signs[i].position-world.route.point(s)).dot(Basis(Vector3.UP,world.route.yaw(s)).x)-6.4>8.8,"LEOSTO 大牌在普通路段路肩外："+world.track.id)
+			for other in occupied:
+				check(absf(s-other)>=100,"LEOSTO 大牌与其他广告错开至少100米："+world.track.id)
+			occupied.append(s)
 	var active = 0
 	for entry in race.world_cache.values():
 		if entry.world.is_inside_tree(): active += 1
