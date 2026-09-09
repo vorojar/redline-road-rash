@@ -64,7 +64,7 @@ func build(path: Path3D, data: Dictionary, gradual: bool = false) -> void:
 		await build_landscape(length)
 	await build_props(length)
 	build_hazards(length)
-	build_finish(length)
+	build_race_gates(length)
 	if track.theme == "coast":
 		var sea = V.box(self, Vector3(2400,.05,6500), Vector3(-1050,-8,-1900), Color("27434b"))
 		sea.material_override.roughness = .24
@@ -323,22 +323,75 @@ func build_hazards(length: float) -> void:
 			(top.mesh as CylinderMesh).top_radius = .035
 			hazards.append({"s":s+j*4,"lane":lane,"radius":.5,"hit":false,"node":cone})
 
-func build_finish(length: float) -> void:
+func build_race_gates(length: float) -> void:
+	build_start_gate()
+	build_finish_gate(length)
+
+func build_start_gate() -> void:
+	var line_root = race_gate_root(0.0,"Start Line")
+	add_ground_checker(line_root,"Ground Checker")
+	# Place the gantry ahead of the staggered rider grid so it stays in the
+	# chase-camera view during the countdown instead of sitting above the camera.
+	var root = race_gate_root(12.0,"Start Gate")
+	add_gate_frame(root,Color("a72528"))
+	V.box(root,Vector3(14.7,.92,.16),Vector3(0,5.2,0),Color("171918"))
+	add_gate_label(root,"S T A R T",Color("f1eee0"))
+	# Five high-contrast starting lamps make the grid readable from the chase camera.
+	for i in range(5):
+		var housing = V.cylinder(root,.24,.16,Vector3((i-2)*.72,4.47,.08),Color("242725"))
+		housing.rotation.x = PI*.5
+		var lens = V.cylinder(root,.16,.18,Vector3((i-2)*.72,4.47,.18),Color("b92e28") if i<4 else Color("4fa64e"))
+		lens.rotation.x = PI*.5
+
+func build_finish_gate(length: float) -> void:
+	var root = race_gate_root(length,"Finish Gate")
+	add_ground_checker(root,"Finish Line")
+	add_gate_frame(root,Color("494b46"))
+	add_checkerboard(root,Vector3(0,5.2,0),Vector2(14.7,1.2),16,4,"Finish Flag",true)
+	V.box(root,Vector3(5.2,.62,.18),Vector3(0,6.18,0),Color("a72528"))
+	add_gate_label(root,"F I N I S H",Color("f1eee0"),6.18,.0042)
+
+func race_gate_root(distance: float, node_name: String) -> Node3D:
 	var root = Node3D.new()
+	root.name = node_name
 	add_child(root)
-	root.position = route.point(length)
-	root.rotation.y = route.yaw(length)
+	root.position = route.point(distance)
+	root.rotation.y = route.yaw(distance)
+	return root
+
+func add_gate_frame(root: Node3D, accent: Color) -> void:
 	for side in [-1,1]:
 		V.box(root,Vector3(.20,5.6,.20),Vector3(side*7.2,2.8,0),Color("494b46"))
-	V.box(root,Vector3(14.7,.75,.12),Vector3(0,5.2,0),Color("d5d0b7"))
+		V.box(root,Vector3(.34,.76,.34),Vector3(side*7.2,.38,0),accent)
+
+func add_gate_label(root: Node3D, words: String, color: Color, height: float = 5.2, pixel_size: float = .005) -> void:
 	var label = Label3D.new()
-	label.text = "F I N I S H"
+	label.name = words.replace(" ","").capitalize()+" Label"
+	label.text = words
 	label.font_size = 120
-	label.pixel_size = .005
-	label.modulate = Color("22231f")
+	label.pixel_size = pixel_size
+	label.modulate = color
 	label.outline_size = 0
-	label.position = Vector3(0,5.2,.08)
+	label.position = Vector3(0,height,.11)
 	root.add_child(label)
+
+func add_ground_checker(root: Node3D, node_name: String) -> void:
+	var line = Node3D.new()
+	line.name = node_name
+	root.add_child(line)
+	add_checkerboard(line,Vector3(0,.045,0),Vector2(13,3.0),10,4,"Cells")
+
+func add_checkerboard(parent: Node3D, center: Vector3, size: Vector2, columns: int, rows: int, node_name: String, vertical: bool = false) -> Node3D:
+	var board = Node3D.new()
+	board.name = node_name
+	parent.add_child(board)
+	var cell = Vector2(size.x/columns,size.y/rows)
+	for row in range(rows):
+		for column in range(columns):
+			var color = Color("eeeadd") if (row+column)%2==0 else Color("151716")
+			var offset = Vector3(-size.x*.5+cell.x*(column+.5),-size.y*.5+cell.y*(row+.5),0) if vertical else Vector3(-size.x*.5+cell.x*(column+.5),0,-size.y*.5+cell.y*(row+.5))
+			V.box(board,Vector3(cell.x,cell.y,.14) if vertical else Vector3(cell.x,.035,cell.y),center+offset,color)
+	return board
 
 func build_corridor_landscape(length: float) -> void:
 	# Long routes use terrain along the road corridor. A world-sized rectangular

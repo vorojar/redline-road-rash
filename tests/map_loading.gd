@@ -50,6 +50,12 @@ func run() -> void:
 	check(not race.world.hazards[0].hit and race.world.hazards[0].node.rotation==Vector3.ZERO,"缓存重新进入时重置路障状态")
 	for entry in race.world_cache.values():
 		var world = entry.world
+		var start_gate = world.get_node_or_null("Start Gate")
+		var start_line = world.get_node_or_null("Start Line/Ground Checker/Cells")
+		var finish_gate = world.get_node_or_null("Finish Gate")
+		check(start_gate!=null and start_line!=null and start_gate.get_node_or_null("Start Label")!=null,"每条赛道有 START 旗门与地面棋盘起跑线："+world.track.id)
+		check(finish_gate!=null and finish_gate.get_node_or_null("Finish Line/Cells")!=null and finish_gate.get_node_or_null("Finish Flag")!=null and finish_gate.get_node_or_null("Finish Label")!=null,"每条赛道有高架赛结旗与地面棋盘终点线："+world.track.id)
+		check(start_line.get_child_count()==40 and finish_gate.get_node("Finish Flag").get_child_count()==64 and finish_gate.get_node("Finish Line/Cells").get_child_count()==40,"起终点棋盘格完整且横跨路面："+world.track.id)
 		var signs = world.find_children("EHAFO *","Node3D",false,false)
 		var distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length))
 		check(signs.size()==4 and distances.size()==4,"每条赛道有四块 EHAFO 广告牌："+world.track.id)
