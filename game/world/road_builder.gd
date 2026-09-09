@@ -214,6 +214,7 @@ func multi(mesh: Mesh, transforms: Array[Transform3D], mat: Material, distance: 
 		add_child(node)
 
 func build_props(length: float) -> void:
+	var billboard_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(self,length,true)
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 329 if track.id == "pine" else 827
 	var tree_transforms: Array[Transform3D] = []
@@ -234,7 +235,12 @@ func build_props(length: float) -> void:
 				var height = rng.randf_range(8,15)
 				pos.y = lerpf(pos.y-.06,land_height(pos),smoothstep(8.8,24,absf(lane)))+height*.5
 				var b = Basis.IDENTITY.scaled(Vector3(height*.65,height,height*.65))
-				if not mobile_quality or (i%2==0 and k==0):
+				var blocks_billboard = false
+				for distance in billboard_distances:
+					var local = Basis(Vector3.UP,route.yaw(distance)).inverse()*(pos-route.point(distance,17))
+					if absf(local.x)<12 and local.z>-10 and local.z<65:
+						blocks_billboard = true
+				if not blocks_billboard and (not mobile_quality or (i%2==0 and k==0)):
 					tree_transforms.append(Transform3D(b,pos))
 		await checkpoint(.78+.08*float(i+3)/(int(length/8)+14))
 	var post = BoxMesh.new()
