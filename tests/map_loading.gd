@@ -58,6 +58,15 @@ func run() -> void:
 			var right = Basis(Vector3.UP,world.route.yaw(s)).x
 			var lane = (signs[i].position-world.route.point(s)).dot(right)
 			check(lane-2.5>8.8 and world.section_kind(s) not in ["service","freight","bridge"],"广告牌在路肩外且避开特殊区域："+world.track.id)
+		var openai_signs = world.find_children("OpenAI *","Node3D",false,false)
+		var openai_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length),true)
+		check(openai_signs.size()==2 and openai_distances.size()==2,"每条赛道新增两块 OpenAI 广告牌："+world.track.id)
+		for i in range(openai_signs.size()):
+			var s: float = openai_distances[i]
+			check(world.section_kind(s) not in ["service","freight","bridge"] and openai_signs[i].position.distance_to(world.route.point(s))>11,"OpenAI 广告牌位于普通路段路肩外："+world.track.id)
+			check(is_equal_approx(openai_signs[i].rotation.y,world.route.yaw(s)),"OpenAI 广告面朝来车："+world.track.id)
+			for other in distances:
+				check(absf(s-other)>40,"OpenAI 与现有广告牌错开："+world.track.id)
 	var active = 0
 	for entry in race.world_cache.values():
 		if entry.world.is_inside_tree(): active += 1

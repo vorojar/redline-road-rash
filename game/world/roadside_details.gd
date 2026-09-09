@@ -32,9 +32,9 @@ static func segment_transform(a: Vector3, b: Vector3) -> Transform3D:
 	# Scale the cylinder in its local Y axis before rotating it onto the span.
 	return Transform3D(Basis(Quaternion(Vector3.UP,delta.normalized()))*Basis.from_scale(Vector3(1,delta.length(),1)),(a+b)*.5)
 
-static func sponsor_distances(world: Node3D, length: float) -> PackedFloat32Array:
+static func sponsor_distances(world: Node3D, length: float, openai: bool = false) -> PackedFloat32Array:
 	var distances = PackedFloat32Array()
-	for anchor in [220.0,length*.32,length*.58,length*.84]:
+	for anchor in ([length*.15,length*.71] if openai else [220.0,length*.32,length*.58,length*.84]):
 		var found = false
 		for step in range(ceili(length/40)):
 			for side in [-1,1]:
@@ -44,12 +44,12 @@ static func sponsor_distances(world: Node3D, length: float) -> PackedFloat32Arra
 					found = true
 					break
 			if found: break
-		assert(found,"EHAFO billboard needs an ordinary roadside section")
+		assert(found,"Sponsor billboard needs an ordinary roadside section")
 	return distances
 
-static func sponsor_board() -> Node3D:
+static func sponsor_board(openai: bool = false) -> Node3D:
 	var board = Node3D.new()
-	board.name = "EHAFO Billboard"
+	board.name = "OpenAI Billboard" if openai else "EHAFO Billboard"
 	for x in [-1.8,1.8]:
 		V.box(board,Vector3(.12,3.6,.12),Vector3(x,1.8,0),Color("62665e"))
 	V.box(board,Vector3(5.0,1.8,.16),Vector3(0,3.5,0),Color("252b29"))
@@ -61,7 +61,7 @@ static func sponsor_board() -> Node3D:
 	face.position = Vector3(0,3.5,.085)
 	face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material = StandardMaterial3D.new()
-	material.albedo_texture = preload("res://assets/textures/sponsors/ehafo.png")
+	material.albedo_texture = preload("res://assets/textures/sponsors/openai.png") if openai else preload("res://assets/textures/sponsors/ehafo.png")
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	face.material_override = material
@@ -69,13 +69,14 @@ static func sponsor_board() -> Node3D:
 	return board
 
 static func build(world: Node3D, length: float) -> void:
-	for s in sponsor_distances(world,length):
-		var board = sponsor_board()
-		board.name = "EHAFO %d" % roundi(s)
-		world.add_child(board)
-		board.position = world.route.point(s,11.8)
-		board.position.y = lerpf(board.position.y-.06,world.land_height(board.position),smoothstep(8.8,24,11.8))
-		board.rotation.y = world.route.yaw(s)
+	for openai in [false,true]:
+		for s in sponsor_distances(world,length,openai):
+			var board = sponsor_board(openai)
+			board.name = ("%s %d" % ["OpenAI" if openai else "EHAFO",roundi(s)])
+			world.add_child(board)
+			board.position = world.route.point(s,11.8)
+			board.position.y = lerpf(board.position.y-.06,world.land_height(board.position),smoothstep(8.8,24,11.8))
+			board.rotation.y = world.route.yaw(s)
 	var markers: Array[Transform3D] = []
 	var reflectors: Array[Transform3D] = []
 	var stones: Array[Transform3D] = []
