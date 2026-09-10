@@ -43,3 +43,5 @@ RATCHET 街车：`models/ratchet.glb` 改编自 [Motorcycle](https://sketchfab.c
 
 
 赛车服广告贴标：`textures/sponsors/brand-sheet.png` 为用户提供的品牌参考图，运行时按原图区域显示 MOTUL、SHOEI、NGK、brembo 和 Red Bull 标识，未重绘这些标识。第三方商标及图形权利归各自权利人，不属于项目原创或 CC0 素材；游戏内装饰不表示实际赞助或背书。`textures/sponsors/ehafo.png` 为根据用户指定文字 EHAFO 通过 imagegen 生成的主标。贴标共用原赛车服 UV 和蒙皮，不改变基础模型或动画。
+
+科技品牌高速广告：`textures/sponsors/{nvidia,microsoft,apple,amazon,anthropic,gemini,tesla}.png` 为根据用户指定品牌通过内置 imagegen 生成的游戏装饰画面，生成提示词保存在 `textures/sponsors/tech-billboards-prompts.md`。品牌名称与标识权利归各自权利人，不属于项目原创商标或 CC0 素材；游戏内出现不表示实际赞助或背书。

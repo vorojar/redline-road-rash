@@ -56,34 +56,37 @@ func run() -> void:
 		check(start_gate!=null and start_line!=null and start_gate.get_node_or_null("Start Label")!=null,"每条赛道有 START 旗门与地面棋盘起跑线："+world.track.id)
 		check(finish_gate!=null and finish_gate.get_node_or_null("Finish Line/Cells")!=null and finish_gate.get_node_or_null("Finish Flag")!=null and finish_gate.get_node_or_null("Finish Label")!=null,"每条赛道有高架赛结旗与地面棋盘终点线："+world.track.id)
 		check(start_line.get_child_count()==40 and finish_gate.get_node("Finish Flag").get_child_count()==64 and finish_gate.get_node("Finish Line/Cells").get_child_count()==40,"起终点棋盘格完整且横跨路面："+world.track.id)
-		var signs = world.find_children("EHAFO *","Node3D",false,false)
-		var distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length))
-		check(signs.size()==4 and distances.size()==4,"每条赛道有四块 EHAFO 广告牌："+world.track.id)
-		for i in range(signs.size()):
-			var s: float = distances[i]
-			var right = Basis(Vector3.UP,world.route.yaw(s)).x
-			var lane = (signs[i].position-world.route.point(s)).dot(right)
-			check(lane-6.4>8.8 and world.section_kind(s) not in ["service","freight","bridge"],"广告牌在路肩外且避开特殊区域："+world.track.id)
-		var openai_signs = world.find_children("OpenAI *","Node3D",false,false)
-		var openai_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length),true)
-		check(openai_signs.size()==2 and openai_distances.size()==2,"每条赛道新增两块 OpenAI 广告牌："+world.track.id)
-		for i in range(openai_signs.size()):
-			var s: float = openai_distances[i]
-			check(world.section_kind(s) not in ["service","freight","bridge"] and (openai_signs[i].position-world.route.point(s)).dot(Basis(Vector3.UP,world.route.yaw(s)).x)-6.4>8.8,"OpenAI 广告牌位于普通路段路肩外："+world.track.id)
-			check(is_equal_approx(openai_signs[i].rotation.y,world.route.yaw(s)),"OpenAI 广告面朝来车："+world.track.id)
-			for other in distances:
-				check(absf(s-other)>40,"OpenAI 与现有广告牌错开："+world.track.id)
-		var leosto_signs = world.find_children("LEOSTO *","Node3D",false,false)
-		var leosto_distances = preload("res://game/world/roadside_details.gd").sponsor_distances(world,float(world.track.length),false,true)
-		check(leosto_signs.size()==3 and leosto_distances.size()==3,"每条赛道新增三块 LEOSTO 大牌："+world.track.id)
-		var occupied = distances.duplicate()
-		occupied.append_array(openai_distances)
-		for i in range(leosto_signs.size()):
-			var s: float = leosto_distances[i]
-			check(world.section_kind(s) not in ["service","freight","bridge"] and (leosto_signs[i].position-world.route.point(s)).dot(Basis(Vector3.UP,world.route.yaw(s)).x)-6.4>8.8,"LEOSTO 大牌在普通路段路肩外："+world.track.id)
-			for other in occupied:
-				check(absf(s-other)>=100,"LEOSTO 大牌与其他广告错开至少100米："+world.track.id)
-			occupied.append(s)
+		var counts = {"EHAFO":4,"OpenAI":2,"LEOSTO":3,"NVIDIA":1,"Microsoft":1,"Apple":1,"Amazon":1,"Anthropic":1,"Gemini":1,"Tesla":1}
+		var occupied: Array[float] = []
+		var left_count = 0
+		var right_count = 0
+		for brand in counts:
+			var signs = world.find_children(brand+" *","Node3D",false,false)
+			check(signs.size()==counts[brand],"每赛道品牌数量 %s × %d：%s" % [brand,counts[brand],world.track.id])
+			for sign_node in signs:
+				var s = float(String(sign_node.name).get_slice(" ",1))
+				var lane = (sign_node.position-world.route.point(s)).dot(Basis(Vector3.UP,world.route.yaw(s)).x)
+				if lane<0: left_count += 1
+				else: right_count += 1
+				check(absf(lane)-6.4>8.8 and world.section_kind(s) not in ["service","freight","bridge"],"大牌在两侧路肩外且避开特殊区域："+str(sign_node.name))
+				check(sign_node.basis.z.dot(-world.route.tangent(s))>.98,"左右广告面都朝向玩家来车，不镜像："+str(sign_node.name))
+				for other in occupied:
+					check(absf(s-other)>=100,"广告牌沿赛道错开至少100米")
+				occupied.append(s)
+		check(left_count==8 and right_count==8,"每条赛道左右各八块广告："+world.track.id)
+		var placements = preload("res://game/world/roadside_details.gd").sponsor_layout(world,float(world.track.length))
+		var blocked_trees = 0
+		for node in world.get_children():
+			if not node is MultiMeshInstance3D: continue
+			var material = node.material_override
+			if not material is StandardMaterial3D or material.albedo_texture==null or not material.albedo_texture.resource_path.ends_with("roadside_pine.png"): continue
+			for tree_index in range(node.multimesh.instance_count):
+				var pos = node.multimesh.get_instance_transform(tree_index).origin
+				for placement in placements:
+					var delta = Basis(Vector3.UP,world.route.yaw(placement.distance)).inverse()*(pos-world.route.point(placement.distance,placement.lane))
+					if absf(delta.x)<12 and delta.z>-10 and delta.z<65: blocked_trees += 1
+		check(blocked_trees==0,"实际生成的树木不占用两侧广告视线："+world.track.id)
+
 	var active = 0
 	for entry in race.world_cache.values():
 		if entry.world.is_inside_tree(): active += 1

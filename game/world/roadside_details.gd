@@ -32,35 +32,54 @@ static func segment_transform(a: Vector3, b: Vector3) -> Transform3D:
 	# Scale the cylinder in its local Y axis before rotating it onto the span.
 	return Transform3D(Basis(Quaternion(Vector3.UP,delta.normalized()))*Basis.from_scale(Vector3(1,delta.length(),1)),(a+b)*.5)
 
-static func sponsor_distances(world: Node3D, length: float, openai: bool = false, leosto: bool = false) -> PackedFloat32Array:
-	var distances = PackedFloat32Array()
-	var occupied = PackedFloat32Array()
-	if leosto:
-		occupied.append_array(sponsor_distances(world,length))
-		occupied.append_array(sponsor_distances(world,length,true))
-	var anchors = [length*.23,length*.46,length*.93] if leosto else ([length*.15,length*.71] if openai else [220.0,length*.32,length*.58,length*.84])
-	for anchor in anchors:
-		var found = false
-		for step in range(ceili(length/40)):
-			for side in [-1,1]:
-				var s: float = anchor+step*40*side
-				var too_close = false
-				for other in occupied:
-					if absf(s-other)<100: too_close = true
-				if too_close: continue
-				if s>60 and s<length-60 and world.section_kind(s) not in ["service","freight","bridge"]:
-					distances.append(s)
-					if leosto: occupied.append(s)
+# Absolute anchors (>1) are metres; fractional anchors follow each track's length.
+const SPONSORS = {
+	"EHAFO": {"texture":"ehafo_medical", "height":12.0*809/1942, "anchors":[220.0,.32,.58,.84]},
+	"OpenAI": {"texture":"openai", "height":4.0, "anchors":[.15,.71]},
+	"LEOSTO": {"texture":"leosto", "height":5.0, "anchors":[.23,.46,.93]},
+	"NVIDIA": {"texture":"nvidia", "height":5.0, "anchors":[.11]},
+	"Microsoft": {"texture":"microsoft", "height":5.0, "anchors":[.27]},
+	"Apple": {"texture":"apple", "height":5.0, "anchors":[.39]},
+	"Amazon": {"texture":"amazon", "height":5.0, "anchors":[.51]},
+	"Anthropic": {"texture":"anthropic", "height":5.0, "anchors":[.65]},
+	"Gemini": {"texture":"gemini", "height":5.0, "anchors":[.78]},
+	"Tesla": {"texture":"tesla", "height":5.0, "anchors":[.89]}
+}
+
+static func sponsor_layout(world: Node3D, length: float) -> Array[Dictionary]:
+	var placements: Array[Dictionary] = []
+	for brand in SPONSORS:
+		for anchor in SPONSORS[brand].anchors:
+			var target: float = anchor if anchor>1 else length*anchor
+			var found = false
+			for step in range(ceili(length/40)):
+				for direction in [-1,1]:
+					var s = roundf(target+step*40*direction)
+					if s<=60 or s>=length-60 or world.section_kind(s) in ["service","freight","bridge"]: continue
+					var too_close = false
+					for other in placements:
+						if absf(s-other.distance)<100: too_close = true
+					if too_close: continue
+					placements.append({"brand":brand,"distance":s,"lane":0.0})
 					found = true
 					break
-			if found: break
-		assert(found,"Sponsor billboard needs an ordinary roadside section")
-	return distances
+				if found: break
+			assert(found,"Sponsor billboard needs an ordinary roadside section")
+	placements.sort_custom(func(a,b): return a.distance<b.distance)
+	for i in range(placements.size()):
+		placements[i].lane = -17.0 if i%2==0 else 17.0
+	return placements
 
-static func sponsor_board(openai: bool = false, leosto: bool = false) -> Node3D:
+static func blocks_sponsor_view(world: Node3D, placements: Array[Dictionary], pos: Vector3) -> bool:
+	for placement in placements:
+		var local = Basis(Vector3.UP,world.route.yaw(placement.distance)).inverse()*(pos-world.route.point(placement.distance,placement.lane))
+		if absf(local.x)<12 and local.z>-10 and local.z<65: return true
+	return false
+
+static func sponsor_board(brand: String = "EHAFO") -> Node3D:
 	var board = Node3D.new()
-	board.name = "LEOSTO Billboard" if leosto else ("OpenAI Billboard" if openai else "EHAFO Billboard")
-	var face_height = 5.0 if leosto else (4.0 if openai else 12.0*809/1942)
+	board.name = brand+" Billboard"
+	var face_height: float = SPONSORS[brand].height
 	var center_y = 6.6+face_height*.5
 	# Highway-scale monopole, rear steelwork and maintenance catwalk.
 	V.box(board,Vector3(2.2,.6,2.2),Vector3(0,.3,0),Color("777b77"))
@@ -82,7 +101,7 @@ static func sponsor_board(openai: bool = false, leosto: bool = false) -> Node3D:
 	face.position = Vector3(0,center_y,.2)
 	face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material = StandardMaterial3D.new()
-	material.albedo_texture = preload("res://assets/textures/sponsors/leosto.png") if leosto else (preload("res://assets/textures/sponsors/openai.png") if openai else preload("res://assets/textures/sponsors/ehafo_medical.png"))
+	material.albedo_texture = load("res://assets/textures/sponsors/%s.png" % SPONSORS[brand].texture)
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	face.material_override = material
@@ -90,15 +109,16 @@ static func sponsor_board(openai: bool = false, leosto: bool = false) -> Node3D:
 	return board
 
 static func build(world: Node3D, length: float) -> void:
-	for brand in ["EHAFO","OpenAI","LEOSTO"]:
-		for s in sponsor_distances(world,length,brand=="OpenAI",brand=="LEOSTO"):
-			var board = sponsor_board(brand=="OpenAI",brand=="LEOSTO")
-			board.name = ("%s %d" % [brand,roundi(s)])
-			world.add_child(board)
-			var lane = 17.0
-			board.position = world.route.point(s,lane)
-			board.position.y = lerpf(board.position.y-.06,world.land_height(board.position),smoothstep(8.8,24,lane))
-			board.rotation.y = world.route.yaw(s)
+	for placement in sponsor_layout(world,length):
+		var s: float = placement.distance
+		var lane: float = placement.lane
+		var board = sponsor_board(placement.brand)
+		board.name = "%s %d" % [placement.brand,roundi(s)]
+		world.add_child(board)
+		board.position = world.route.point(s,lane)
+		board.position.y = lerpf(board.position.y-.06,world.land_height(board.position),smoothstep(8.8,24,absf(lane)))
+		# Both sides face approaching riders; moving left must not mirror the artwork.
+		board.rotation.y = world.route.yaw(s)
 	var markers: Array[Transform3D] = []
 	var reflectors: Array[Transform3D] = []
 	var stones: Array[Transform3D] = []
