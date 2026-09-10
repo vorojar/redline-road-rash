@@ -50,7 +50,7 @@ def main():
     assert full["fvar"].axes[0].minValue == final["fvar"].axes[0].minValue
     # Compare actual outlines and advance widths at every weight used by the HUD.
     sample = set("公路狂徒滑动转向格挡蓄力刹车攻击暂停继续比赛松岭海岸断崖体力摩托REDLINE0123456789")
-    for weight in [100, 500, 700]:
+    for weight in [400, 600]:
         original_glyphs = full.getGlyphSet(location={"wght": weight})
         subset_glyphs = final.getGlyphSet(location={"wght": weight})
         for character in sample:
@@ -61,7 +61,7 @@ def main():
             new.draw(b)
             assert a.value == b.value and old.width == new.width, f"Glyph changed: {character} / {weight}"
     print(json.dumps({"characters": len(characters), "original_bytes": SOURCE.stat().st_size,
-                      "subset_bytes": OUTPUT.stat().st_size, "outline_checks": len(sample)*3}, ensure_ascii=False))
+                      "subset_bytes": OUTPUT.stat().st_size, "outline_checks": len(sample)*2}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

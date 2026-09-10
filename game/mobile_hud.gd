@@ -48,34 +48,34 @@ func draw(h) -> void:
 		draw_race(h,height)
 
 func heading(h, title: String) -> void:
-	h.panel(Rect2(0,0,960,82),Color("101713"))
-	h.text(title,24,52,34,h.cream,true)
-	h.text("$ %d" % h.race.career.credits,732,51,26,h.gold)
+	h.panel(Rect2(0,0,960,56),Color("101713"))
+	h.text(title,24,36,25,h.cream,true)
+	h.text("$ %d" % h.race.career.credits,766,35,20,h.gold)
 
 func draw_menu(h, height: float) -> void:
 	var race = h.race
 	if race.mode!="ready": h.draw_rect(Rect2(0,0,960,height),Color("101713"))
 	heading(h,"REDLINE" if race.mode=="ready" else ("车库 / GARAGE" if race.mode=="garage" else "驾驶设置"))
 	if race.mode == "ready":
-		h.panel(Rect2(16,92,436,252))
+		h.panel(Rect2(16,72,436,266))
 		for i in range(race.career.catalog.tracks.size()):
 			var track: Dictionary = race.career.catalog.tracks[i]
-			h.button(Rect2(28,99+i*59,412,52),track.name+(" · 12 km" if track.id=="interstate" else "")+(" · 未解锁" if track.id not in race.career.unlocked else ""),func(): race.select_track(i),race.track.id==track.id)
-		h.button(Rect2(28,282,412,56),"开始比赛",func(): race.start(),true)
-		h.panel(Rect2(478,92,458,92))
+			h.button(Rect2(28,84+i*59,412,52),track.name+(" · 12 km" if track.id=="interstate" else "")+(" · 未解锁" if track.id not in race.career.unlocked else ""),func(): race.select_track(i),false,false,race.track.id==track.id)
+		h.button(Rect2(28,274,412,56),"开始比赛",func(): race.start(),true)
+		h.panel(Rect2(478,72,458,100))
 		h.panel(Rect2(16,356,436,70))
-		h.text(race.career.bike().name,490,129,32,h.cream,true)
-		h.text("自动油门 · 松开刹车继续加速",490,169,24,h.gold)
+		h.text(race.career.bike().name,496,112,25,h.cream,true)
+		h.text("自动油门 · 松开刹车继续加速",496,148,19,h.gold)
 		h.button(Rect2(492,196,432,64),"车库 · 选择摩托",func(): race.menu_action("garage"))
 		h.button(Rect2(492,272,432,64),"驾驶设置",func(): race.menu_action("settings"))
 		h.button(Rect2(492,348,432,64),"教学练习",func(): race.start(true))
-		h.text("左手滑动转向",28,379,26,h.cream)
-		h.text("右手攻击 / 刹车 / 蓄力冲刺",28,414,24,h.faded)
+		h.text("左手滑动转向",28,382,21,h.cream)
+		h.text("右手攻击 / 刹车 / 蓄力冲刺",28,413,19,h.faded)
 	elif race.mode == "garage":
 		h.panel(Rect2(16,88,414,height-104),Color("101713"))
 		for i in range(3):
 			var bike: Dictionary = race.career.catalog.bikes[i]
-			h.button(Rect2(28,100+i*74,390,64),bike.name,func(): h.preview_bike(i),h.garage_index==i)
+			h.button(Rect2(28,100+i*74,390,64),bike.name,func(): h.preview_bike(i),false,false,h.garage_index==i)
 		var selected: Dictionary = race.career.catalog.bikes[h.garage_index]
 		var owned: bool = selected.id in race.career.owned
 		h.button(Rect2(28,height-86,390,64),"使用这辆摩托" if owned else "购买 $%d" % selected.price,func(): h.purchase_bike(),true,not owned and race.career.credits<int(selected.price))
@@ -100,23 +100,23 @@ func draw_menu(h, height: float) -> void:
 func draw_race(h, height: float) -> void:
 	var race = h.race
 	var p = race.player
-	h.panel(Rect2(0,0,960,90),Color(.04,.065,.05,.90))
-	h.text("%03d" % int(p.speed*3.6),24,52,40,h.cream,true)
-	h.text("km/h",120,50,22,h.faded)
-	h.text("%d / 6" % race.rank,230,51,32,h.cream,true)
-	h.text("%d / %d m" % [p.distance,race.track.length],362,49,24,h.faded)
+	h.panel(Rect2(0,0,960,64),Color(.04,.065,.05,.90))
+	h.text("%03d" % int(p.speed*3.6),24,38,30,h.cream,true)
+	h.text("km/h",100,36,17,h.faded)
+	h.text("%d / 6" % race.rank,216,37,25,h.cream,true)
+	h.text("%d / %d m" % [p.distance,race.track.length],344,36,19,h.faded)
 	var opponent = race.nearest_target(18)
 	if opponent>=0:
 		var rival = race.racers[opponent]
-		h.text(rival.name+" · %d m" % Vector2(rival.s-p.distance,rival.lane-p.lane).length(),610,29,20,h.red if (rival.windup>0 and rival.combat_target==-1) else h.cream,true)
-		h.bar(610,43,220,rival.hp,h.red if rival.hp<35 else h.gold)
-		h.text(("小心夺械" if rival.stealing else "准备格挡") if (rival.windup>0 and rival.combat_target==-1) else race.RacerAI.intent_label(rival),610,78,18,h.red if (rival.windup>0 and rival.combat_target==-1) else h.faded)
+		h.text(rival.name+" · %d m" % Vector2(rival.s-p.distance,rival.lane-p.lane).length(),604,24,17,h.red if (rival.windup>0 and rival.combat_target==-1) else h.cream,true)
+		h.bar(604,32,220,rival.hp,h.red if rival.hp<35 else h.gold)
+		h.text(("小心夺械" if rival.stealing else "准备格挡") if (rival.windup>0 and rival.combat_target==-1) else race.RacerAI.intent_label(rival),604,56,16,h.red if (rival.windup>0 and rival.combat_target==-1) else h.faded)
 	else:
-		h.text(race.Combat.WEAPONS[p.weapon].name,624,49,24,h.gold)
-	h.bar(24,70,160,p.health,h.red if p.health<35 else Color("789463"))
-	h.bar(230,70,104,p.durability/p.max_durability*100,h.red if p.condition_power()<.98 else h.gold)
-	if race.endurance.index>=0: h.text(race.endurance.stages[race.endurance.index].name,355,110,23,h.gold,true)
-	h.bar(362,70,210,p.stamina,Color("758e82"))
+		h.text(race.Combat.WEAPONS[p.weapon].name,620,37,20,h.gold)
+	h.bar(24,51,160,p.health,h.red if p.health<35 else Color("789463"))
+	h.bar(216,51,104,p.durability/p.max_durability*100,h.red if p.condition_power()<.98 else h.gold)
+	if race.endurance.index>=0: h.text(race.endurance.stages[race.endurance.index].name,344,88,18,h.gold,true)
+	h.bar(344,51,220,p.stamina,Color("758e82"))
 	if race.mode in ["racing","countdown"]:
 		var rects: Dictionary = race.touch.layout(height,race.career.settings.touch_left_handed)
 		for action in rects:
@@ -139,7 +139,7 @@ func draw_overlay(h, height: float) -> void:
 		h.text(str(int(ceil(race.countdown))),448,height*.50,80,h.gold,true)
 		h.text("自动油门 · 准备转向",344,height*.50+45,26,h.cream)
 		return
-	h.panel(Rect2(0,90,960,height-90),Color(.02,.03,.025,.75))
+	h.panel(Rect2(0,64,960,height-64),Color(.02,.03,.025,.75))
 	var y = maxf(96,(height-324)*.5)
 	h.panel(Rect2(204,y,552,324),Color("101713"))
 	h.text("比赛已暂停",230,y+47,36,h.cream,true)

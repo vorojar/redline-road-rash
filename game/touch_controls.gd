@@ -14,7 +14,7 @@ func layout(height: float, left_handed: bool = false) -> Dictionary:
 		"boost": Rect2(836,height-246,88,88),
 		"guard": Rect2(716,height-226,88,88),
 		"grab": Rect2(596,height-112,80,80),
-		"pause": Rect2(862,16,64,64)
+		"pause": Rect2(866,4,56,56)
 	}
 	if left_handed:
 		for action in rects:

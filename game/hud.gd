@@ -21,19 +21,14 @@ var garage_view: SubViewportContainer
 
 func _ready() -> void:
 	var ui_font_path = "res://assets/fonts/RedlineUI.ttf" if OS.has_feature("web") else "res://assets/fonts/NotoSansSC.ttf"
-	if OS.get_name()=="Windows" or OS.has_feature("web"):
-		font = load(ui_font_path)
-		bold = FontVariation.new()
-		bold.base_font = font
-		bold.variation_embolden = .7
-	else:
-		font.font_names = PackedStringArray(["Helvetica Neue","PingFang SC"])
-		bold.font_names = font.font_names
-		bold.font_weight = 800
-	touch_font.base_font = load(ui_font_path)
-	touch_font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):500}
-	touch_bold.base_font = touch_font.base_font
-	touch_bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):700}
+	font = FontVariation.new()
+	font.base_font = load(ui_font_path)
+	font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):400}
+	bold = FontVariation.new()
+	bold.base_font = font.base_font
+	bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"):600}
+	touch_font = font
+	touch_bold = bold
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	trophy_view = preload("res://game/trophy_view.gd").new()
@@ -137,14 +132,20 @@ func panel(rect: Rect2, color: Color = Color(0.035,.042,.04,.94)) -> void:
 	draw_rect(rect,color)
 	draw_rect(rect,Color(.5,.51,.45,.30),false,1)
 
-func button(rect: Rect2,label: String,callback: Callable,primary: bool = false,disabled: bool = false) -> void:
-	var color = Color("772a22") if primary else Color("292e2b")
+func button(rect: Rect2,label: String,callback: Callable,primary: bool = false,disabled: bool = false,selected: bool = false) -> void:
+	var color = Color("a63728") if primary else (Color("30382f") if selected else Color("202723"))
 	if rect.has_point(hover) and not disabled:
 		color = color.lightened(.15)
 	if disabled:
 		color = Color("191e1c")
 	panel(rect,color)
-	text(label,rect.position.x+18,rect.position.y+rect.size.y*.5+9,26 if race.touch.enabled else 20,faded if disabled else cream,true)
+	if selected and not disabled:
+		draw_rect(rect,gold,false,1)
+		draw_rect(Rect2(rect.position,Vector2(3,rect.size.y)),gold)
+	var label_size = 21 if race.touch.enabled else 19
+	var label_font = bold if primary else font
+	var baseline = rect.get_center().y+(label_font.get_ascent(label_size)-label_font.get_descent(label_size))*.5
+	text(label,rect.position.x+18,baseline,label_size,faded if disabled else cream,primary)
 	if not disabled:
 		clicks.append({"rect":rect,"callback":callback})
 
@@ -199,26 +200,26 @@ func draw_loading(view: Vector2) -> void:
 
 func draw_menu() -> void:
 	draw_rect(Rect2(0,0,1440,100),Color(.03,.04,.04,.90))
-	text("REDLINE",48,59,42,cream,true)
+	text("REDLINE",48,59,34,cream,true)
 	text("公 路 狂 徒   /   CLASSIC HIGHWAY COMBAT",285,55,16,faded)
 	text("$ %s" % race.career.credits,1210,54,25,gold,true)
 	if race.mode == "ready":
 		panel(Rect2(45,145,465,619))
-		text("THE ROAD BELONGS",73,197,25,cream,true)
-		text("TO NOBODY.",73,241,38,cream,true)
+		text("THE ROAD BELONGS",73,197,22,cream,true)
+		text("TO NOBODY.",73,241,32,cream,true)
 		text("高速穿过车流，把对手甩在身后。",73,284,18,faded)
 		text("选择赛事",73,333,14,gold)
 		for i in range(race.career.catalog.tracks.size()):
 			var track: Dictionary = race.career.catalog.tracks[i]
 			var locked = track.id not in race.career.unlocked
-			button(Rect2(73,349+i*61,408,51),("▶ " if race.track.id == track.id else "   ")+track.name+(" · 12 km" if track.id=="interstate" else "")+(" · 未解锁" if locked else ""),func(): race.select_track(i),race.track.id == track.id)
+			button(Rect2(73,349+i*61,408,51),("▶ " if race.track.id == track.id else "   ")+track.name+(" · 12 km" if track.id=="interstate" else "")+(" · 未解锁" if locked else ""),func(): race.select_track(i),false,false,race.track.id == track.id)
 		button(Rect2(73,548,408,61),"开始比赛     ENTER",func(): race.start(),true)
 		button(Rect2(73,621,197,48),"车库 / GARAGE",func(): race.menu_action("garage"))
 		button(Rect2(284,621,197,48),"驾驶设置",func(): race.menu_action("settings"))
 		button(Rect2(73,683,408,48),"教学练习 · 不计奖金",func(): race.start(true))
 		text("WASD / 方向键驾驶 · 空格攻击 · SHIFT 蓄力",73,754,14,faded)
 		text(race.track.subtitle,875,668,21,gold,true)
-		text(race.career.bike().name,875,710,30,cream,true)
+		text(race.career.bike().name,875,710,26,cream,true)
 		text("%d km/h   ·   %s" % [int(race.player.top_speed*3.6),race.difficulty().name],875,744,18,cream)
 		text("3D 重制 / 90 年代公路精神",48,851,14,faded)
 	elif race.mode == "garage":
@@ -235,7 +236,7 @@ func draw_garage() -> void:
 	text("比赛获奖金，升级你的公路机器。",73,223,18,faded)
 	for i in range(3):
 		var bike: Dictionary = race.career.catalog.bikes[i]
-		button(Rect2(73,250+i*66,512,55),bike.name+("  /  已拥有" if bike.id in race.career.owned else "  /  $%d" % bike.price),func(): preview_bike(i),garage_index == i)
+		button(Rect2(73,250+i*66,512,55),bike.name+("  /  已拥有" if bike.id in race.career.owned else "  /  $%d" % bike.price),func(): preview_bike(i),false,false,garage_index == i)
 	var selected: Dictionary = race.career.catalog.bikes[garage_index]
 	text(selected.description,73,480,18,faded)
 	text("极速",73,522,15)
