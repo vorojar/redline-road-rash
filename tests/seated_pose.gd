@@ -12,22 +12,35 @@ func run():
  var hip_weight=0.0
  var back_extent=0.0
  var matte_panels=0
+ var waist_center=0.0
+ var waist_side=0.0
+ var center_normals=0
+ var inward_normals=0
  for surface in range(body.mesh.get_surface_count()):
   var material=body.mesh.surface_get_material(surface)
   if material.resource_name=="Seat reinforcement" and material.roughness>=.75: matte_panels+=1
   var arrays=body.mesh.surface_get_arrays(surface)
   var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+  var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
   var bones: PackedInt32Array=arrays[Mesh.ARRAY_BONES]
   var weights: PackedFloat32Array=arrays[Mesh.ARRAY_WEIGHTS]
   for i in range(vertices.size()):
    var v=vertices[i]
+   if v.y>.98 and v.y<1.08 and v.z>.07 and absf(v.x)>.003 and absf(v.x)<.025:
+    center_normals+=1
+    if normals[i].x*signf(v.x)<-.02:inward_normals+=1
+   if v.y>1.10 and v.y<1.16 and v.z>0:
+    if absf(v.x)<.018: waist_center=maxf(waist_center,v.z)
+    if absf(v.x)>.035 and absf(v.x)<.055: waist_side=maxf(waist_side,v.z)
    if v.y<.98 or v.y>1.05 or absf(v.x)>.12 or v.z<.065: continue
    samples+=1;back_extent=maxf(back_extent,v.z)
    for influence in range(4):
     if body.skin.get_bind_name(bones[i*4+influence])==&"hips": hip_weight+=weights[i*4+influence]
  check(samples>15,"臀部后片保留实际连续网格")
  check(samples>0 and hip_weight/samples>=.80,"臀部后片主要随骨盆运动，避免屈腿时被大腿拉鼓")
- check(back_extent<=.086,"赛车裤后片轮廓收平，不形成过度突出的双球")
+ check(back_extent>.095 and back_extent<.125,"赛车裤后片保留圆润体积，不再压成平板")
+ check(waist_center>=waist_side-.002 and waist_side>.02,"腰部后片中线没有比两侧更深的臀沟")
+ check(center_normals>5 and inward_normals<float(center_normals)*.05,"后片中线法线朝圆弧外侧，不残留原人体沟槽高光")
  check(matte_panels==1,"臀部采用独立哑光加固后片，不使用高光条纹")
  actor.queue_free();await process_frame
  print("SEATED_POSE_RESULT: %d failures"%failures)

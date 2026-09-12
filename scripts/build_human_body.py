@@ -107,21 +107,25 @@ for i in used:
  if total<=0:raise RuntimeError('Unweighted anatomical vertex '+str(i))
  weights[i]={k:v/total for k,v in weights[i].items()}
  vertices.append(sum((fitted(raw[i],key)*value for key,value in weights[i].items()),Vector()))
-# A padded racing-pants seat has a flatter silhouette than the bare anatomical body.
-# Keep this posterior panel on the pelvis; thigh flexion must not pull it into lobes.
+# A continuous padded pants panel bridges the anatomical cleft up to the waist.
+# Preserve one rounded volume over the seat instead of flattening both cheeks.
 def smooth_range(a,b,value):
  t=max(0,min(1,(value-a)/(b-a)))
  return t*t*(3-2*t)
 for point,source_index in zip(vertices,used):
  w=weights[source_index]
  if sum(value for key,value in w.items() if key in ['hips','spine','thigh_L','thigh_R'])<.98:continue
- coverage=smooth_range(.865,.95,point.z)*(1-smooth_range(1.065,1.16,point.z))
- coverage*=1-smooth_range(.15,.215,abs(point.x))
- coverage*=smooth_range(.008,.035,-point.y)
- point.y=point.y*(1-coverage)-.074*coverage
+ coverage=smooth_range(.84,.93,point.z)*(1-smooth_range(1.23,1.31,point.z))
+ coverage*=1-smooth_range(.17,.235,abs(point.x))
+ # The deepest centerline vertices are almost at Y=0. Including only the outer
+ # back surface would leave that cleft untouched while rounding its two sides.
+ coverage*=1-smooth_range(.006,.025,point.y)
+ depth=(.066+.034*math.exp(-((point.z-1.0)/.10)**2))*math.sqrt(max(.12,1-(point.x/.235)**2))
+ point.y=point.y*(1-coverage)-depth*coverage
  weights[source_index]={key:value*(1-coverage) for key,value in w.items()}
- weights[source_index]['hips']=weights[source_index].get('hips',0)+coverage*.9
- weights[source_index]['spine']=weights[source_index].get('spine',0)+coverage*.1
+ pelvis=.9*(1-smooth_range(1.05,1.18,point.z))
+ weights[source_index]['hips']=weights[source_index].get('hips',0)+coverage*pelvis
+ weights[source_index]['spine']=weights[source_index].get('spine',0)+coverage*(1-pelvis)
 mesh=bpy.data.meshes.new('Continuous anatomical topology');mesh.from_pydata(vertices,[],[tuple(remap[i] for i in reversed(f)) for f in source_faces]);mesh.update()
 body=bpy.data.objects.new('Continuous racing suit',mesh);bpy.context.collection.objects.link(body)
 # Clothing allowance preserves anatomical shoulders / trapezius while covering skin.
@@ -202,6 +206,14 @@ for vertex in mesh.vertices:
   sleeve=math.exp(-((p.x-x)/.065)**4-((p.z-1.18)/.10)**2)
   fold+=.003*sleeve*math.sin(p.z*170+p.y*28)
  vertex.co+=vertex.normal*fold
+ # Reproject after normal-based allowance and subdivision: anatomical normals
+ # otherwise restore the center cleft even on a rounded clothing envelope.
+ p=vertex.co
+ cover=smooth_range(.86,.94,p.z)*(1-smooth_range(1.20,1.29,p.z))
+ cover*=1-smooth_range(.15,.215,abs(p.x))
+ cover*=smooth_range(.015,.035,-p.y)
+ depth=(.076+.034*math.exp(-((p.z-1.0)/.10)**2))*math.sqrt(max(.12,1-(p.x/.235)**2))
+ p.y=p.y*(1-cover)-depth*cover
 mesh.update()
 mod=body.modifiers.new('Anatomical skinning','ARMATURE');mod.object=rig;body.parent=rig
 # Remove under-helmet facial detail from rendering, keeping the neck in the body mesh.
