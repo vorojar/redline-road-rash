@@ -60,34 +60,32 @@ static func update(race: Node3D, dt: float) -> void:
 	update_police(race,dt)
 
 static func update_police(race: Node3D,dt: float) -> void:
-	if race.tutorial:
+	if race.tutorial or race.mode=="finished":
 		return
 	if race.heat>=50 and not race.police.active:
 		race.police.active = true
 		race.police.s = race.player.distance-95
 		race.police.warning = 5.0
+		race.police.phase="pursuit";race.police.yaw=0;race.police.hold=0;race.police.arrest=0
+		race.police.speed=clampf(race.player.speed+8,43,59)
 		race.notify("警笛从后方接近 · 尽快脱离追击",3)
 	if not race.police.active:
 		return
 	race.police.warning = maxf(0,race.police.warning-dt)
 	var gap = race.player.distance-race.police.s
-	var cop_speed = clampf(43+gap*.13,28,59)
-	race.police.speed=cop_speed
-	race.police.s += cop_speed*dt
-	race.police.lane = move_toward(race.police.lane,race.player.lane,dt*1.15)
+	update_pursuer(race,"",dt)
 	if gap>180:
 		race.police.active = false
 		race.heat = 15
 		race.police.support_active=false
 		race.notify("已甩开警方")
-	elif absf(gap)<4 and race.police.warning<=0:
-		if race.player.crash_timer>1.2:
-			race.police.arrest += dt
-			if race.police.arrest>.85:
-				race.finish("BUSTED","警方截获，比赛结束")
-		elif absf(race.player.lane-race.police.lane)<1.4 and race.player.invulnerable<=0:
-			race.player.damage(4,18,true)
-			race.player.apply_lateral_impulse(1.5 if race.player.lane>=0 else -1.5)
+		return
+	elif absf(race.player.distance-race.police.s)<9 and absf(race.player.lane-race.police.lane)<2.8 and race.police.warning<=0 and (race.player.crash_timer>1.2 or race.player.speed<2.5):
+		race.police.arrest += dt
+		if race.police.arrest>.85:
+			race.police.speed=0;race.police.support_speed=0
+			race.finish("BUSTED","警方截停，比赛结束")
+			return
 	else:
 		race.police.arrest = 0.0
 	if race.heat>=70 and not race.police.support_active:
@@ -95,17 +93,14 @@ static func update_police(race: Node3D,dt: float) -> void:
 		race.police.support_s=race.player.distance-140
 		race.police.support_lane=-2 if race.player.lane>0 else 2
 		race.police.support_warning=6.0
+		race.police.support_phase="pursuit";race.police.support_hold=0
+		race.police.support_speed=clampf(race.player.speed+10,61,63)
 		race.notify("增援警车接近 · 留意侧后方",3)
 	if race.police.support_active:
 		var support_gap: float=race.player.distance-race.police.support_s
 		race.police.support_warning=maxf(0,race.police.support_warning-dt)
-		race.police.support_speed=clampf(54+support_gap*.09,30,61)
-		race.police.support_s+=race.police.support_speed*dt
-		var flank=clampf(race.player.lane+(-2.1 if race.player.lane>0 else 2.1),-5.5,5.5)
-		race.police.support_lane=move_toward(race.police.support_lane,flank,dt*.85)
+		update_pursuer(race,"support_",dt)
 		if support_gap>190: race.police.support_active=false
-		elif absf(support_gap)<4 and absf(race.player.lane-race.police.support_lane)<1.3 and race.police.support_warning<=0:
-			race.player.damage(4,18,true)
 	# A predictable one-lane roadblock; a clear passage always remains.
 	if race.heat>85 and not race.police.roadblock:
 		race.police.roadblock = true
@@ -115,3 +110,47 @@ static func update_police(race: Node3D,dt: float) -> void:
 			race.add_child(barrier)
 			race.traffic.append({"mesh":barrier,"s":race.player.distance+220,"lane":side*lane,"speed":0.0,"half_length":2.1})
 		race.notify("前方 220 米右侧封锁 · 左侧通行" if side>0 else "前方 220 米左侧封锁 · 右侧通行",4)
+
+static func update_pursuer(race: Node3D, prefix: String, dt: float) -> void:
+	var cop: Dictionary=race.police
+	var p=race.player
+	var lead: float=cop[prefix+"s"]-p.distance
+	var phase: String=cop[prefix+"phase"]
+	var stopped: bool=p.crash_timer>0 or p.speed<2.5
+	var target_lane: float=p.lane
+	var speed: float=0.0 if stopped else p.speed
+	var limit=59.0 if prefix.is_empty() else 63.0
+	var main=prefix.is_empty()
+	var target_lead=maxf(18,p.speed*1.2+6) if main else 1.5
+	if phase=="block" and lead< -12:phase="pursuit"
+	if main and phase!="block":cop.yaw=move_toward(cop.yaw,0,dt*1.8)
+	if phase=="pursuit" and lead> -22:
+		phase="flank"
+		var side=-1.0 if p.lane>3 else 1.0 if p.lane< -3 else signf(p.lane)
+		if side==0:side=1
+		cop[prefix+"side"]=side if prefix.is_empty() else -side
+	if phase=="pursuit":
+		speed=clampf(maxf(p.speed+9,43-lead*.13),0,limit)
+	else:
+		var flank=clampf(p.lane+cop[prefix+"side"]*2.3,-5.5,5.5)
+		if phase=="flank" and lead>=target_lead-2 and main:phase="intercept"
+		if phase=="intercept" and lead< -4:phase="flank"
+		target_lane=flank if phase=="flank" else float(p.lane)
+		speed=clampf(p.speed+(target_lead-lead)*1.4,0,limit)
+		if phase=="intercept" and absf(cop[prefix+"lane"]-p.lane)<.6 and cop[prefix+"warning"]<=0:phase="block"
+		if phase=="block":
+			# Commit to the road position: turn diagonally and brake, leaving
+			# an escape route instead of sliding sideways to mirror the rider.
+			target_lane=cop[prefix+"lane"];speed=0
+			cop.yaw=move_toward(cop.yaw,cop.side*PI/3,dt*1.8)
+		if lead<0 and lead> -8 and absf(cop[prefix+"lane"]-p.lane)<2:speed=minf(speed,p.speed)
+	if stopped and absf(lead)<9 and absf(cop[prefix+"lane"]-p.lane)<2.8:
+		speed=0;cop[prefix+"speed"]=0;target_lane=cop[prefix+"lane"]
+	else:cop[prefix+"lane"]=move_toward(cop[prefix+"lane"],target_lane,dt*1.6)
+	cop[prefix+"hold"]=maxf(0,cop[prefix+"hold"]-dt)
+	if cop[prefix+"hold"]>0:speed=0;cop[prefix+"speed"]=0
+	cop[prefix+"speed"]=move_toward(cop[prefix+"speed"],speed,dt*(35 if phase=="block" else 14 if speed<cop[prefix+"speed"] else 8))
+	cop[prefix+"s"]+=cop[prefix+"speed"]*dt
+	cop[prefix+"phase"]=phase
+	var lamps: Dictionary=cop[prefix+"mesh"].get_meta("lamps")
+	for brake in lamps.brake:brake.visible=speed<p.speed or stopped or cop[prefix+"hold"]>0

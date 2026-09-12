@@ -8,9 +8,9 @@ const SKIN = .015
 static func vehicles(race) -> Array:
 	var cars=race.traffic.duplicate()
 	if race.police.active:
-		cars.append({"s":race.police.s,"lane":race.police.lane,"speed":race.police.speed,"half_length":2.1})
+		cars.append({"s":race.police.s,"lane":race.police.lane,"speed":race.police.speed,"half_length":2.1*absf(cos(race.police.yaw))+CAR_HALF_WIDTH*absf(sin(race.police.yaw)),"half_width":CAR_HALF_WIDTH*absf(cos(race.police.yaw))+2.1*absf(sin(race.police.yaw)),"police_unit":""})
 		if race.police.support_active:
-			cars.append({"s":race.police.support_s,"lane":race.police.support_lane,"speed":race.police.support_speed,"half_length":2.1})
+			cars.append({"s":race.police.support_s,"lane":race.police.support_lane,"speed":race.police.support_speed,"half_length":2.1,"police_unit":"support_"})
 	return cars
 
 static func snapshot(race) -> Array[Vector2]:
@@ -87,7 +87,7 @@ static func resolve(race, previous: Array[Vector2]) -> void:
 				var old=previous[a.index]-previous[1+race.racers.size()+j] if iteration==0 and 1+race.racers.size()+j<previous.size() else current
 				# Traffic recycling is a spawn, not a sweep through the whole road.
 				if absf(current.x-old.x)>100: old=current
-				var push=correction(old,current,Vector2(car.half_length+BIKE_HALF.x,CAR_HALF_WIDTH+BIKE_HALF.y))
+				var push=correction(old,current,Vector2(car.half_length+BIKE_HALF.x,float(car.get("half_width",CAR_HALF_WIDTH))+BIKE_HALF.y))
 				if push==Vector2.ZERO: continue
 				moved=true
 				a.s+=push.x; a.lane+=push.y
@@ -101,6 +101,10 @@ static func resolve(race, previous: Array[Vector2]) -> void:
 					if car.driver.contact_hold>0 or (a.s-car.s)*car.driver.direction>=0:
 						car.speed=0
 						car.driver.braking=true
+				elif car.has("police_unit"):
+					race.police[car.police_unit+"speed"]=0
+					race.police[car.police_unit+"hold"]=.8
+					car.speed=0
 				if push.x<0: a.speed=minf(a.speed,maxf(0,car.speed)*.85)
 				elif push.x>0 and car.speed<0: a.speed=0
 				elif push.y!=0: a.speed*=.96

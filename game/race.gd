@@ -216,7 +216,7 @@ func reset_race() -> void:
 	add_child(cop)
 	var support=Traffic.vehicle(Color("babfc3"),false,true)
 	add_child(support)
-	police = {"speed":0.0,"support_speed":0.0,"support_mesh":support,"support_active":false,"support_s":-140.0,"support_lane":-2.0,"support_warning":0.0,"mesh":cop,"s":-90.0,"lane":2.0,"active":false,"warning":0.0,"arrest":0.0,"roadblock":false}
+	police = {"speed":0.0,"phase":"pursuit","yaw":0.0,"side":1.0,"hold":0.0,"support_speed":0.0,"support_phase":"pursuit","support_side":-1.0,"support_hold":0.0,"support_mesh":support,"support_active":false,"support_s":-140.0,"support_lane":-2.0,"support_warning":0.0,"mesh":cop,"s":-90.0,"lane":2.0,"active":false,"warning":0.0,"arrest":0.0,"roadblock":false}
 	for hazard in world.hazards:
 		hazard.hit = false
 		hazard.node.rotation = Vector3.ZERO
@@ -647,7 +647,7 @@ func update_visuals(dt: float) -> void:
 	police.support_mesh.rotation.y=route.yaw(police.support_s)
 	police.mesh.visible = police.active
 	police.mesh.position = route.point(police.s,police.lane)
-	police.mesh.rotation.y = route.yaw(police.s)
+	police.mesh.rotation.y = route.yaw(police.s)+police.yaw
 	var pos = player_mesh.position
 	var direction = route.tangent(visual_distance).rotated(Vector3.UP,player.heading_offset)
 	var desired = pos-direction*4.3+Vector3.UP*1.95

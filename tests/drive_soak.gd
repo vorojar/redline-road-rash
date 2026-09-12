@@ -43,7 +43,9 @@ func _physics_process(dt):
 	var safest=2.0
 	var best_score=-INF
 	for candidate in [-4.8,-1.6,1.6,4.8]:
-		var score= -absf(candidate-player.lane)*.35 + (2.0 if candidate>0 else -100.0)
+		# Escape a nearby police box-in through a clear opposite lane.
+		var intercepting=race.police.active and absf(race.police.s-player.distance)<80
+		var score= -absf(candidate-player.lane)*.35 + (2.0 if candidate>0 else -8.0 if intercepting else -100.0)
 		for car in vehicles:
 			var gap=car.s-player.distance
 			if gap>-5 and gap<maxf(32,absf(player.speed-car.speed)*1.5):
@@ -72,7 +74,7 @@ func _physics_process(dt):
 	if service: brake=1.0 if player.lane>5.8 else maxf(brake,clampf((player.speed-15)*.2,0,1))
 	var throttle = 1.0 if brake<.05 else 0.0
 	clear_road = clear_road and upcoming_curve<.003
-	var held = clear_road and "--charge" in OS.get_cmdline_user_args() and race.burst.cooldown<=0 and race.burst.remaining<=0 and race.burst.charge<race.burst.CHARGE_SECONDS-.0001
+	var held = clear_road and ("--charge" in OS.get_cmdline_user_args() or race.police.active) and race.burst.cooldown<=0 and race.burst.remaining<=0 and race.burst.charge<race.burst.CHARGE_SECONDS-.0001
 	# Combat-focused opponents now keep up: exercise real defense rather than tanking hits.
 	var guard = false
 	for r in race.racers:
