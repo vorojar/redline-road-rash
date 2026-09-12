@@ -39,6 +39,8 @@ for side in ['L','R']:
  source_segments['forearm_'+side]=(joint('lowerarm01.'+mh,'head'),joint('wrist.'+mh,'head').lerp((joint('finger2-1.'+mh,'head')+joint('finger5-1.'+mh,'head'))*.5,.7))
  source_segments['thigh_'+side]=(joint('upperleg01.'+mh,'head'),joint('lowerleg01.'+mh,'head'))
  source_segments['shin_'+side]=(joint('lowerleg01.'+mh,'head'),joint('foot.'+mh,'head'))
+ source_segments['wrist_'+side]=source_segments['forearm_'+side]
+ source_segments['wrist_mid_'+side]=source_segments['forearm_'+side]
 # Curl the mature mesh's articulated fingers into a handlebar / weapon grip.
 # Apply the source finger weights before collapsing them to the gameplay hand segment.
 grip_sources={side:(joint('finger2-1.'+('R' if side=='L' else 'L'),'head'),joint('finger5-1.'+('R' if side=='L' else 'L'),'head')) for side in ['L','R']}
@@ -73,6 +75,19 @@ for name,values in source_weights.items():
  else:mapping={'head':1}
  for index,value in values:
   for target,factor in mapping.items():weights[index][target]+=value*factor
+# Full grip rotation belongs at the wrist. Keep it out of the elbow and blend
+# along the sleeve, instead of twisting the entire forearm into the upper arm.
+for index,w in enumerate(weights):
+ for side in ['L','R']:
+  key='forearm_'+side
+  if key not in w:continue
+  a,b=source_segments[key];axis=b-a
+  t=max(0,min(1,((raw[index]-a).dot(axis)/axis.length_squared-.12)/.70))
+  t=t*t*(3-2*t)
+  value=w[key]
+  w['wrist_'+side]=value*max(0,2*t-1)
+  w['wrist_mid_'+side]=value*(1-abs(2*t-1))
+  w[key]=value*max(0,1-2*t)
 # Retarget rest geometry with exactly the same linear skinning used by the game.
 def fitted(point,key):
  a,b=source_segments[key];c,d=map(Vector,bones[key]);axis=(b-a).normalized();rotation=(b-a).rotation_difference(d-c)
@@ -113,13 +128,24 @@ body=bpy.data.objects.new('Continuous racing suit',mesh);bpy.context.collection.
 for vertex in mesh.vertices:
  vertex.co+=vertex.normal*(.010 if vertex.co.z<1.54 else .002)
 mesh.update()
+# Give the jacket an actual garment envelope instead of painting bare anatomy.
+# The waist allowance tapers out before the seated panel and shoulder joints.
+for vertex in mesh.vertices:
+ p=vertex.co
+ torso=sum(weights[used[vertex.index]].get(k,0) for k in ['hips','spine'])
+ waist=smooth_range(1.07,1.15,p.z)*(1-smooth_range(1.30,1.44,p.z))*torso
+ p.x+=math.copysign(.025*waist*smooth_range(.045,.10,abs(p.x)),p.x)
+ p.y+=math.copysign(.012*waist,p.y)
+mesh.update()
 seat_panel=mat('Seat reinforcement',(.012,.014,.018),0,.86)
 for material in [leather,limb,black,seat_panel]:mesh.materials.append(material)
 uv=mesh.uv_layers.new(name='UVMap')
 for polygon in mesh.polygons:
  center=polygon.center;influences=defaultdict(float)
  for i in polygon.vertices:
-  for key,value in weights[used[i]].items():influences[key]+=value
+  for key,value in weights[used[i]].items():
+   region='forearm_'+key[-1] if key.startswith('wrist') else key
+   influences[region]+=value
  key=max(influences,key=influences.get)
  is_limb=key.startswith(('upper_arm','forearm','thigh','shin'))
  # Gloves, boots and the balaclava are part of the continuous human surface.
@@ -149,6 +175,34 @@ for key in bones:
  for local_index,source_index in enumerate(used):
   value=weights[source_index].get(key,0)
   if value>0:vg.add([local_index],value,'REPLACE')
+# Relax small anatomical grooves beneath leather, then resolve shallow folds in
+# geometry so they still read at grazing angles and follow the same skin weights.
+bpy.context.view_layer.objects.active=body;body.select_set(True)
+cloth=body.vertex_groups.new(name='Garment allowance')
+for vertex in mesh.vertices:
+ z=vertex.co.z
+ amount=smooth_range(1.08,1.16,z)*(1-smooth_range(1.51,1.56,z))
+ if amount>0:cloth.add([vertex.index],amount,'REPLACE')
+relax=body.modifiers.new('Leather over anatomy','SMOOTH');relax.factor=.65;relax.iterations=5;relax.vertex_group=cloth.name
+bpy.ops.object.modifier_apply(modifier=relax.name)
+body.vertex_groups.remove(body.vertex_groups['Garment allowance'])
+sub=body.modifiers.new('Garment fold resolution','SUBSURF');sub.levels=1
+bpy.ops.object.modifier_apply(modifier=sub.name)
+mesh=body.data
+for vertex in mesh.vertices:
+ p=vertex.co.copy();fold=0.0
+ # Fabric gathers above the waistband and diagonally beneath the shoulder blades.
+ waist=smooth_range(1.10,1.15,p.z)*(1-smooth_range(1.25,1.31,p.z))
+ side=smooth_range(.065,.13,abs(p.x))
+ fold+=.002*waist*math.sin(p.z*155+abs(p.x)*34+p.y*17)
+ fold+=.0025*side*math.exp(-((p.z-1.36)/.09)**2)*math.sin(p.z*120-abs(p.x)*47)
+ # Elbows have localized folds; the glove and seat remain untouched.
+ for suffix in ['L','R']:
+  x=bones['forearm_'+suffix][0][0]
+  sleeve=math.exp(-((p.x-x)/.065)**4-((p.z-1.18)/.10)**2)
+  fold+=.003*sleeve*math.sin(p.z*170+p.y*28)
+ vertex.co+=vertex.normal*fold
+mesh.update()
 mod=body.modifiers.new('Anatomical skinning','ARMATURE');mod.object=rig;body.parent=rig
 # Remove under-helmet facial detail from rendering, keeping the neck in the body mesh.
 # The editable original CC0 head remains available in base.obj.

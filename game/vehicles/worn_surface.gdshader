@@ -48,5 +48,8 @@ void fragment(){
  NORMAL_MAP = texture(normal_map,UV).rgb;
  NORMAL_MAP_DEPTH = .65;
  METALLIC = metal;
- ROUGHNESS = texture(roughness_map,UV)[roughness_channel];
+ // Protective leather has a broad, subdued highlight, including printed panels.
+ // Keep the texture variation without the wet-plastic sheen on shoulders.
+ ROUGHNESS = mix(.52,.78,texture(roughness_map,UV)[roughness_channel]);
+ SPECULAR = .32;
 }

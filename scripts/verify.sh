@@ -20,6 +20,8 @@ run_checked work/verify-quality.log --headless --path "$ROOT" --script res://tes
 cat work/verify-quality.log
 run_checked work/verify-seated-pose.log --headless --path "$ROOT" --script res://tests/seated_pose.gd
 cat work/verify-seated-pose.log
+run_checked work/verify-rider-clothing.log --headless --path "$ROOT" --script res://tests/rider_clothing.gd
+cat work/verify-rider-clothing.log
 run_checked work/verify-street-bike.log --headless --path "$ROOT" --script res://tests/street_bike.gd
 cat work/verify-street-bike.log
 run_checked work/verify-traffic-pose.log --headless --path "$ROOT" --script res://tests/traffic_pose.gd

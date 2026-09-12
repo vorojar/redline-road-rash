@@ -8,10 +8,12 @@ limb=mapped('Suit limbs','rider_limb',.65)
 helm=mapped('Helmet','rider_helmet',.24,.18)
 trim=mat('Jacket seam',(.24,.26,.27),0,.65)
 glass=mat('Glass',(.022,.053,.072),.72,.095)
-armor=mat('Molded protectors',(.035,.042,.050),.04,.48)
+armor=mat('Molded protectors',(.025,.029,.034),0,.76)
 bones={'hips':((0,0,.93),(0,0,1.08)), 'spine':((0,0,1.06),(0,0,1.52)), 'head':((0,0,1.54),(0,0,1.91))}
 for side,x in [('L',-.21),('R',.21)]:
  bones['upper_arm_'+side]=((x,0,1.47),(x*1.14,0,1.16));bones['forearm_'+side]=((x*1.14,0,1.16),(x*1.2,0,.88));bones['thigh_'+side]=((-.13 if side=='L' else .13,0,.98),(-.1404 if side=='L' else .1404,0,.55));bones['shin_'+side]=((-.1404 if side=='L' else .1404,0,.55),(-.1456 if side=='L' else .1456,0,.13))
+for side in ['L','R']:
+ for prefix in ['wrist_','wrist_mid_']:bones[prefix+side]=bones['forearm_'+side]
 bpy.ops.object.armature_add();rig=bpy.context.object;rig.name='RiderRig';bpy.ops.object.mode_set(mode='EDIT');rig.data.edit_bones.remove(rig.data.edit_bones[0]);root=rig.data.edit_bones.new('root');root.head=(0,0,0);root.tail=(0,0,.2)
 for name,(a,b) in bones.items():
  eb=rig.data.edit_bones.new(name);eb.head=a;eb.tail=b;eb.parent=root
@@ -46,7 +48,7 @@ bpy.ops.import_scene.gltf(filepath=os.path.join(ROOT,'assets/models/source/djeng
 helmet_objects=[o for o in bpy.context.scene.objects if o not in helmet_before]
 for obj in helmet_objects:
  if obj.type!='MESH':continue
- transform=Matrix.Translation(Vector((0,.01,1.615+3.9604609013*.032))) @ Matrix.Diagonal((-.032,-.032,.032,1)) @ obj.matrix_world
+ transform=Matrix.Translation(Vector((0,.01,1.585+3.9604609013*.032))) @ Matrix.Diagonal((-.032,-.032,.032,1)) @ obj.matrix_world
  normals=[(transform.to_3x3().inverted().transposed()@n.vector).normalized() for n in obj.data.corner_normals]
  obj.data.transform(transform)
  obj.data.normals_split_custom_set(normals)
@@ -97,7 +99,12 @@ def fitted_protector(name,center,radius,material,depth):
    for influence in body.data.vertices[index].groups:
     if influence.group==group.index:vg.add([remap[index]],influence.weight,'REPLACE')
  bpy.ops.object.select_all(action='DESELECT');obj.select_set(True);bpy.context.view_layer.objects.active=obj
- sub=obj.modifiers.new('Rounded protector boundary','SUBSURF');sub.levels=2;bpy.ops.object.modifier_apply(modifier=sub.name)
+ # Relax the sampled boundary before subdivision: subdivision alone preserves
+ # the stair-stepped polygon selection, leaving a scalloped plastic patch.
+ relax=obj.modifiers.new('Tailored protector edge','SMOOTH');relax.factor=1;relax.iterations=8
+ bpy.ops.object.modifier_apply(modifier=relax.name)
+ # The fitted body already has one subdivision level; one more is sufficient.
+ sub=obj.modifiers.new('Rounded protector boundary','SUBSURF');sub.levels=1;bpy.ops.object.modifier_apply(modifier=sub.name)
  mod=obj.modifiers.new('Shared anatomical skinning','ARMATURE');mod.object=rig;obj.parent=rig
  return obj
 # Soft overlapping garment edges conceal the neck and glove-to-sleeve transitions.

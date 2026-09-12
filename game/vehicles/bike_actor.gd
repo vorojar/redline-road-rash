@@ -206,7 +206,20 @@ func bone(name: String, a: Vector3, b: Vector3, roll: float = 0) -> void:
 	var length_key = name.trim_suffix("_L").trim_suffix("_R")
 	skeleton.set_bone_pose_scale(index,Vector3(1,(b-a).length()/float(LENGTHS[length_key]),1))
 	skeleton.set_bone_pose_position(index,a)
-	skeleton.set_bone_pose_rotation(index,(Basis((b-a).normalized(),roll)*Basis(rotation_to)*rest.basis).get_rotation_quaternion())
+	var alignment = Basis(rotation_to)*rest.basis
+	if name.begins_with("forearm_"):
+		# A visual twist bone shares the forearm endpoints but adds no ragdoll body.
+		# Every pose path (riding, recovery, crash) updates it through this method.
+		var wrist = int(bone_ids[name.replace("forearm_","wrist_")])
+		skeleton.set_bone_pose_position(wrist,a)
+		skeleton.set_bone_pose_scale(wrist,skeleton.get_bone_pose_scale(index))
+		skeleton.set_bone_pose_rotation(wrist,(Basis((b-a).normalized(),roll)*alignment).get_rotation_quaternion())
+		var middle = int(bone_ids[name.replace("forearm_","wrist_mid_")])
+		skeleton.set_bone_pose_position(middle,a)
+		skeleton.set_bone_pose_scale(middle,skeleton.get_bone_pose_scale(index))
+		skeleton.set_bone_pose_rotation(middle,(Basis((b-a).normalized(),roll*.60)*alignment).get_rotation_quaternion())
+		roll *= .20
+	skeleton.set_bone_pose_rotation(index,(Basis((b-a).normalized(),roll)*alignment).get_rotation_quaternion())
 
 func hand_roll(suffix: String, elbow: Vector3, hand: Vector3, grip_axis: Vector3) -> float:
 	var axis = (hand-elbow).normalized()
