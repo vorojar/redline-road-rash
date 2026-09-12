@@ -16,6 +16,8 @@ run_checked() {
 run_checked work/verify-import.log --headless --path "$ROOT" --editor --import --quit
 run_checked work/verify-rules.log --headless --path "$ROOT" --script res://tests/test_race.gd
 cat work/verify-rules.log
+run_checked work/verify-reverse.log --headless --path "$ROOT" --script res://tests/reverse.gd
+cat work/verify-reverse.log
 run_checked work/verify-quality.log --headless --path "$ROOT" --script res://tests/render_quality.gd
 cat work/verify-quality.log
 run_checked work/verify-seated-pose.log --headless --path "$ROOT" --script res://tests/seated_pose.gd

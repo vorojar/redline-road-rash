@@ -70,7 +70,7 @@ func configure(spec: Dictionary) -> void:
 	max_durability = spec.durability
 	durability = max_durability
 
-func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) -> void:
+func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool, reverse: bool = false) -> void:
 	cooldown = maxf(0,cooldown-dt)
 	attack_time = maxf(0,attack_time-dt)
 	invulnerable = maxf(0,invulnerable-dt)
@@ -93,7 +93,11 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	var motor = condition_power()
 	var cap = corner_speed(curve_force,top_speed*motor+(12 if boost else 0),handling)
 	var target_accel = throttle*(acceleration*motor+(6 if boost else 0)) - brake*32 - 1.8 - ground_slope*8
-	if speed<=cap:
+	if speed<=0 and reverse and brake>.1 and throttle<.1:
+		speed=move_toward(speed,-4.0*brake,dt*5)
+	elif speed<0:
+		speed=move_toward(speed,0,dt*(16 if throttle>.1 else 8))
+	elif speed<=cap:
 		speed = clampf(speed+target_accel*dt,0,cap)
 	else:
 		speed = maxf(0,speed+minf(target_accel,0)*dt)
@@ -137,7 +141,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 	# Lean includes the road turn as well as the player's lane change.
 	var world_turn_rate = curve_force*forward_speed+relative_turn_rate
 	lean = lerpf(lean,clampf(atan(world_turn_rate*speed/9.8)*.65,-.78,.78),minf(dt*8,1))
-	if absf(lane)>6.5:
+	if absf(lane)>6.5 and speed>0:
 		speed = move_toward(speed,25,dt*(8 if assist else 12))
 	stability = minf(100,stability+dt*7)
 	if absf(lane)>8.1:
@@ -146,7 +150,7 @@ func drive(dt: float, throttle: float, brake: float, steer: float, boost: bool) 
 		lateral_impulse = -lateral_velocity*.35
 		heading_offset *= -.35
 		steering_rate = 0
-	distance += advance
+	distance = maxf(0,distance+advance)
 	if stability <= 0:
 		crash()
 
@@ -191,7 +195,7 @@ func credit_ko(environment: bool) -> void:
 
 func turn_rate() -> float:
 	var high_speed_damping = lerpf(1.0,.85,clampf((speed-25)/40,0,1))
-	return handling*.5*clampf(speed/12,0,1)*high_speed_damping
+	return handling*.5*clampf(absf(speed)/12,0,1)*high_speed_damping
 
 # Arcade cornering trades a little speed for grip; impacts own the fall penalty.
 static func corner_speed(curvature: float, maximum: float, agility: float) -> float:

@@ -420,7 +420,7 @@ func _physics_process(dt: float) -> void:
 		touch.cancel_boost = false
 	var driving = touch.driving(cruise)
 	if driving.brake>.1: cruise = false
-	simulate(dt,driving.throttle,driving.brake,driving.steer,driving.boost)
+	simulate(dt,driving.throttle,driving.brake,driving.steer,driving.boost,Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN))
 	player_mesh.ground_move(route.point(player.distance,player.lane),route.yaw(player.distance)+player.heading_offset,dt)
 
 func _process(dt: float) -> void:
@@ -442,7 +442,7 @@ func _process(dt: float) -> void:
 		if frame_samples.size()>600:
 			frame_samples.pop_front()
 
-func simulate(dt: float, throttle: float, brake: float, steer: float, boost: bool) -> void:
+func simulate(dt: float, throttle: float, brake: float, steer: float, boost: bool, reverse: bool = false) -> void:
 	var contact_start = Contacts.snapshot(self)
 	elapsed += dt
 	throttle_value = throttle
@@ -450,7 +450,7 @@ func simulate(dt: float, throttle: float, brake: float, steer: float, boost: boo
 	player.curve_force = route.curvature(player.distance)
 	player.defend(dt,touch.driving(cruise).guard)
 	var boost_active = burst.update(dt,boost,throttle>.1 and brake<.1 and player.crash_timer<=0)
-	player.drive(dt,throttle,brake,steer,boost_active)
+	player.drive(dt,throttle,brake,steer,boost_active,reverse)
 	if player.crash_timer>0 and is_instance_valid(player_mesh.crash_rig):
 		var location = crash_location(player_mesh.crash_rig.bike_body.global_position)
 		player.distance = location.x
