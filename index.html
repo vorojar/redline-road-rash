@@ -50,7 +50,7 @@ canvas.addEventListener('touchcancel',suspendGame,{capture:true,passive:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendGame();});
 canvas.addEventListener('contextmenu',event=>event.preventDefault());
 fitGame();
-const config={"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"engine-c9dbb46ce578375d","experimentalVK":false,"fileSizes":{"redline-e3b2f6919314efad.pck":47382840,"engine-c9dbb46ce578375d.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"mainPack":"redline-e3b2f6919314efad.pck"};
+const config={"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"engine-c9dbb46ce578375d","experimentalVK":false,"fileSizes":{"redline-e0ff2bad9c7a41c8.pck":47392872,"engine-c9dbb46ce578375d.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"mainPack":"redline-e0ff2bad9c7a41c8.pck"};
 // Cap UI resolution; Godot scales the 3D scene separately to keep text sharp.
 if(window.redlineTouchDevice) config.canvasResizePolicy=0;
 const engine=new Engine(config);
