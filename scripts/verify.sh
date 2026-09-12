@@ -22,6 +22,12 @@ run_checked work/verify-seated-pose.log --headless --path "$ROOT" --script res:/
 cat work/verify-seated-pose.log
 run_checked work/verify-rider-clothing.log --headless --path "$ROOT" --script res://tests/rider_clothing.gd
 cat work/verify-rider-clothing.log
+run_checked work/verify-traffic-yield.log --headless --path "$ROOT" --script res://tests/traffic_yield.gd
+cat work/verify-traffic-yield.log
+run_checked work/verify-police-intercept.log --headless --path "$ROOT" --script res://tests/police_intercept.gd
+cat work/verify-police-intercept.log
+run_checked work/verify-start-lights.log --headless --path "$ROOT" --script res://tests/start_lights.gd
+cat work/verify-start-lights.log
 run_checked work/verify-street-bike.log --headless --path "$ROOT" --script res://tests/street_bike.gd
 cat work/verify-street-bike.log
 run_checked work/verify-traffic-pose.log --headless --path "$ROOT" --script res://tests/traffic_pose.gd

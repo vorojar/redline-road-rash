@@ -19,9 +19,13 @@ var gear: int = 1
 var shift_time: float = 0
 var duck_time: float = 0
 var rpm: float = .8
+var start_tick_count: int = 0
+var start_go_count: int = 0
 
 func _ready() -> void:
 	if DisplayServer.get_name() == "headless": return
+	effects["start_tick"]=starting_tone(660,.12)
+	effects["start_go"]=starting_tone(1046.5,.48)
 	var limiter_exists = false
 	for index in range(AudioServer.get_bus_effect_count(0)):
 		if AudioServer.get_bus_effect(0,index).resource_name=="REDLINE output": limiter_exists=true
@@ -70,6 +74,25 @@ func celebrate() -> void:
 	victory_count+=1
 	play_effect("victory",-12,1)
 	duck_time = 2.6
+
+static func starting_tone(frequency: float, duration: float) -> AudioStreamWAV:
+	var stream=AudioStreamWAV.new()
+	stream.format=AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate=44100
+	var samples=int(duration*stream.mix_rate)
+	var data=PackedByteArray();data.resize(samples*2)
+	for i in range(samples):
+		var t=float(i)/stream.mix_rate
+		var envelope=minf(1,t/.006)*minf(1,(duration-t)/.035)
+		var sample=int(11000*envelope*(sin(TAU*frequency*t)+.15*sin(TAU*frequency*2*t)))
+		data.encode_s16(i*2,sample)
+	stream.data=data
+	return stream
+
+func start_signal(go: bool) -> void:
+	if go:start_go_count+=1
+	else:start_tick_count+=1
+	play_effect("start_go" if go else "start_tick",-10 if go else -13,1)
 
 func loop_player(path: String, volume: float) -> AudioStreamPlayer:
 	var player = AudioStreamPlayer.new()

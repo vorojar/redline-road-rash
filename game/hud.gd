@@ -397,11 +397,13 @@ func draw_overlay() -> void:
 	if race.mode=="finished":
 		FinishOverlay.draw(self,1440,900)
 		return
-	draw_rect(Rect2(0,0,1440,730),Color(.02,.03,.025,.6))
 	if race.mode == "countdown":
-		text(str(int(ceil(race.countdown))),659,398,112,gold,true)
-		text("油门准备  /  RT 或 W",602,451,21)
+		# Keep the overhead starting lamps unobscured throughout the countdown.
+		panel(Rect2(580,475,280,150))
+		text(str(int(ceil(race.countdown))),695,555,72,gold,true)
+		text("油门准备  /  RT 或 W",606,601,19)
 		return
+	draw_rect(Rect2(0,0,1440,730),Color(.02,.03,.025,.6))
 	panel(Rect2(410,150,620,505))
 	text("PAUSED",450,221,49,cream,true)
 	text("比赛已暂停",450,269,22,gold)

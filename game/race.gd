@@ -45,7 +45,9 @@ var police: Dictionary
 var mode: String = "ready"
 var resume_mode: String = "racing"
 var elapsed: float = 0.0
-var countdown: float = 3.0
+const START_DURATION = 3.0
+var countdown: float = START_DURATION
+var start_light_phase: int = 0
 var heat: float = 0.0
 var nitro: float = 100.0
 var burst = Burst.new()
@@ -184,7 +186,9 @@ func reset_race() -> void:
 	player_mesh.style_rider(Color("354f68"))
 	player_mesh.position = route.point(0,player.lane)
 	elapsed = 0
-	countdown = 3
+	countdown = START_DURATION
+	start_light_phase=0
+	world.set_start_lights(0)
 	heat = 0
 	burst = Burst.new()
 	nitro = 100
@@ -272,7 +276,8 @@ func start(practice: bool = false) -> void:
 	reset_race()
 	tutorial = practice
 	mode = "countdown"
-	sound.click()
+	sound.start_tick_count=0;sound.start_go_count=0
+	sound.start_signal(false)
 	if tutorial:
 		for car in traffic:
 			car.s += 1200
@@ -393,7 +398,13 @@ func _physics_process(dt: float) -> void:
 	for r in racers:
 		r.mesh.pause_crash(mode != "racing")
 	if mode == "countdown":
-		countdown -= dt
+		countdown = maxf(0,countdown-dt)
+		if countdown<.00001:countdown=0
+		var next_phase=mini(world.start_lamps.size(),int(floor((START_DURATION-countdown)/START_DURATION*world.start_lamps.size()+.00001)))
+		while start_light_phase<next_phase:
+			start_light_phase+=1
+			sound.start_signal(start_light_phase==world.start_lamps.size())
+		world.set_start_lights(start_light_phase)
 		if countdown<=0:
 			mode = "racing"
 			notify("GO！冲出车流。")

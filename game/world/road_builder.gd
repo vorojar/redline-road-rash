@@ -13,6 +13,7 @@ var paint_tool: SurfaceTool
 signal build_progress(value: float)
 var cooperative: bool = false
 var slice_started: int = 0
+var start_lamps: Array[MeshInstance3D] = []
 
 func checkpoint(progress: float) -> void:
 	if cooperative and Time.get_ticks_usec()-slice_started >= 4000:
@@ -335,8 +336,15 @@ func build_start_gate() -> void:
 	for i in range(5):
 		var housing = V.cylinder(root,.24,.16,Vector3((i-2)*.72,4.47,.08),Color("242725"))
 		housing.rotation.x = PI*.5
-		var lens = V.cylinder(root,.16,.18,Vector3((i-2)*.72,4.47,.18),Color("b92e28") if i<4 else Color("4fa64e"))
+		var lens = V.cylinder(root,.16,.18,Vector3((i-2)*.72,4.47,.18),Color("b92e28"))
 		lens.rotation.x = PI*.5
+		lens.material_override.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		start_lamps.append(lens)
+	set_start_lights(0)
+
+func set_start_lights(green_count: int) -> void:
+	for i in range(start_lamps.size()):
+		start_lamps[i].material_override.albedo_color=Color("43ed73") if i<green_count else Color("f02d29")
 
 func build_finish_gate(length: float) -> void:
 	var root = race_gate_root(length,"Finish Gate")
