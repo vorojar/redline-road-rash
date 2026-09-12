@@ -40,14 +40,16 @@ static func vehicle(color: Color, truck: bool = false, police: bool = false) -> 
 	return car
 
 static func update(race: Node3D, dt: float) -> void:
+	var obstacles=Driver.riders(race)
 	for car in race.traffic:
-		if car.has("driver"): Driver.update(race,car,dt)
+		if car.has("driver"): Driver.update(race,car,dt,obstacles)
 		car.s += car.speed*dt
 		if car.s<race.player.distance-110 and car.has("driver"):
 			car.s = race.player.distance+620+race.rng.randf_range(0,300)
 			car.lane=car.driver.home
 			car.driver.origin=car.lane; car.driver.target=car.lane
 			car.driver.signal=0; car.driver.changing=false; car.driver.progress=0
+			car.driver.contact_hold=0; car.driver.contact_time=-100
 	for hazard in race.world.hazards:
 		if not hazard.hit and absf(hazard.s-race.player.distance)<.9 and absf(hazard.lane-race.player.lane)<.7:
 			hazard.hit = true

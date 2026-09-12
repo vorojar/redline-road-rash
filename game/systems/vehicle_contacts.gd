@@ -93,6 +93,14 @@ static func resolve(race, previous: Array[Vector2]) -> void:
 				a.s+=push.x; a.lane+=push.y
 				var closing=absf(a.speed-car.speed)
 				impact(race,a,closing,signf(push.y),true)
+				if car.has("driver"):
+					# One stop per contact episode; a bike touching the rear must
+					# not keep resetting the timer and pin both vehicles forever.
+					if race.elapsed-car.driver.contact_time>.3:car.driver.contact_hold=2.0
+					car.driver.contact_time=race.elapsed
+					if car.driver.contact_hold>0 or (a.s-car.s)*car.driver.direction>=0:
+						car.speed=0
+						car.driver.braking=true
 				if push.x<0: a.speed=minf(a.speed,maxf(0,car.speed)*.85)
 				elif push.x>0 and car.speed<0: a.speed=0
 				elif push.y!=0: a.speed*=.96
